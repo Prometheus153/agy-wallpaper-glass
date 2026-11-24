@@ -163,4 +163,6 @@ test('frost theme enforces light readable surfaces, split borders, review froste
   assert.match(css, /\[data-testid\*="review"\]/);
   assert.match(css, /iframe\[src\*="127\.0\.0\.1:47831\/"\]/);
   assert.match(css, /max-width: 356px !important/);
+  assert.match(css, /#agy-glass-pet-root \{ position: fixed; z-index: 25; pointer-events: none;/);
+  assert.match(css, /#agy-glass-pet-root\.obscured \{ z-index: 0 !important; opacity: 0 !important; \}/);
 });

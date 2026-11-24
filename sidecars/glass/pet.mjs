@@ -28,6 +28,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   let currentLeft = 0;
   let currentTop = 200;
   let drawerLoaded = false;
+  let obscured = false;
 
   // Floating liquid-glass drawer host (only used in live Antigravity Desktop, not preview iframe)
   let drawerHost = null;
@@ -155,6 +156,43 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
       drawerHost.style.width = `${drawerW}px`;
       drawerHost.style.left = `${Math.round(rect.right - 8 - drawerW)}px`;
       drawerHost.setAttribute('data-open', String(drawerOpen));
+    }
+    syncObscured();
+  }
+
+  function isObscuredByModal() {
+    if (typeof document.querySelectorAll !== 'function') return false;
+    const d = dims();
+    const petLeft = currentLeft + d.padL;
+    const petRight = petLeft + d.bodyW;
+    const petTop = currentTop + d.padT;
+    const petBottom = petTop + d.bodyH;
+    const vw = globalThis.innerWidth || 1280;
+    const vh = globalThis.innerHeight || 800;
+    const overlays = document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], [data-testid*="settings-modal"], [data-testid*="settings-dialog"]');
+    for (const el of overlays) {
+      if (!el || el === root || el === menu || el === drawerHost) continue;
+      if (el.hidden || el.getAttribute?.('aria-hidden') === 'true') continue;
+      const r = el.getBoundingClientRect?.();
+      if (!r || r.width < 120 || r.height < 100) continue;
+      const cs = globalThis.getComputedStyle?.(el);
+      if (cs && (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0)) continue;
+      const coversLargeArea = r.width > vw * 0.42 && r.height > vh * 0.42;
+      const overlapsPet = r.left < petRight + 16 && r.right > petLeft - 16 && r.top < petBottom + 16 && r.bottom > petTop - 16;
+      if (coversLargeArea || overlapsPet) return true;
+    }
+    return false;
+  }
+
+  function syncObscured() {
+    const nextObscured = isObscuredByModal();
+    if (nextObscured === obscured) return;
+    obscured = nextObscured;
+    root.classList.toggle('obscured', obscured);
+    drawerHost?.classList.toggle('obscured', obscured);
+    if (obscured) {
+      hovered = false;
+      hideMenu();
     }
   }
 
@@ -293,8 +331,11 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
         lastPaneRight = r.right;
         bindPaneObserver();
         layout(false);
+      } else {
+        syncObscured();
       }
     }
+    if (obscured) return;
 
     const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     hoverT += ((hovered ? 1 : 0) - hoverT) * Math.min(1, dt * 11);
