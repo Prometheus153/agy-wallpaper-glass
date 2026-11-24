@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="sidecar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AGY Glass · 壁纸与液态玻璃</title>
+  <link rel="stylesheet" href="./panel.css">
+  <script defer src="./panel.js"></script>
+</head>
+<body>
+  <div class="panel-ambient" id="panel-ambient" aria-hidden="true"></div>
+  <div class="shell">
+    <section class="preview-pane" aria-label="实时效果预览">
+      <div class="preview-bar">
+        <span class="preview-brand"><span class="brand-dot"></span>AGY GLASS <strong>v1.0</strong></span>
+        <span class="preview-hint">左侧为主界面液态玻璃实时预览 · 右侧参数即时生效</span>
+      </div>
+      <div class="preview-frame-wrap">
+        <iframe id="preview" title="Antigravity 主界面液态玻璃实时预览" src="./preview.html"></iframe>
+      </div>
+    </section>
+
+    <aside class="drawer" aria-label="AGY Glass 控制面板">
+      <header class="drawer-header">
+        <div class="drawer-title-group">
+          <h1>AGY Glass</h1>
+          <span class="conn-pill" id="conn-pill"><i class="status-dot" id="status-dot"></i><span id="connection">连接中…</span></span>
+        </div>
+        <label class="ios-switch master-switch" title="开启或关闭液态玻璃与壁纸">
+          <input type="checkbox" id="toggle-enabled" disabled>
+          <span class="ios-track"></span>
+        </label>
+      </header>
+
+      <section class="now-playing" aria-label="当前壁纸">
+        <div class="np-avatar" id="np-avatar"><span id="np-avatar-glyph">✦</span><img id="np-avatar-img" alt="" hidden></div>
+        <div class="np-meta">
+          <strong id="media-name">内置氛围背景</strong>
+          <span id="media-subtitle">液态玻璃 · 待机</span>
+        </div>
+        <div class="np-actions">
+          <button type="button" class="icon-btn" id="btn-pause" title="暂停 / 继续" disabled>暂停</button>
+          <button type="button" class="icon-btn" id="btn-reload" title="重新加载壁纸" disabled>刷新</button>
+          <button type="button" class="icon-btn" id="clear-media" title="清除壁纸，恢复内置背景" disabled>清除</button>
+        </div>
+      </section>
+
+      <nav class="tab-bar" role="tablist" aria-label="功能切换">
+        <button type="button" role="tab" class="tab-btn active" data-tab="wallpaper" aria-selected="true">壁纸</button>
+        <button type="button" role="tab" class="tab-btn" data-tab="style" aria-selected="false">样式</button>
+      </nav>
+
+      <div class="drawer-scroll" id="drawer-scroll">
+        <!-- TAB 1: 壁纸 -->
+        <section class="tab-panel active" id="tab-wallpaper" role="tabpanel">
+          <div class="lib-search-row">
+            <input id="library-search" class="glass-input" type="search" placeholder="搜索本机壁纸…" maxlength="180">
+            <button type="button" class="glass-btn compact" id="library-refresh" title="重新扫描壁纸库">扫描</button>
+          </div>
+          <div class="chip-row" id="library-filter-chips" role="group" aria-label="壁纸类型筛选">
+            <button type="button" class="chip active" data-filter="all">全部</button>
+            <button type="button" class="chip" data-filter="builtin">内置</button>
+            <button type="button" class="chip" data-filter="scene">场景</button>
+            <button type="button" class="chip" data-filter="video">视频</button>
+            <button type="button" class="chip" data-filter="image">图片</button>
+            <button type="button" class="chip" data-filter="web">网页</button>
+            <button type="button" class="chip" data-filter="hidden">隐藏</button>
+          </div>
+          <div class="import-row">
+            <button type="button" class="glass-btn accent-soft import-btn" id="btn-import-folder">导入场景 / 目录</button>
+            <label class="glass-btn import-btn upload-label" for="media-input">导入文件 / .pkg
+              <input type="file" id="media-input" accept=".pkg,image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm">
+            </label>
+          </div>
+          <div class="folder-import-box" id="folder-import-box" hidden>
+            <input type="text" id="folder-import-path" class="glass-input" maxlength="512" placeholder="粘贴本地场景/网页壁纸目录路径…">
+            <button type="button" class="glass-btn accent-soft compact" id="folder-import-confirm">导入</button>
+          </div>
+          <details class="glass-details" id="library-source-details">
+            <summary>扫描目录与 Steam 库</summary>
+            <p class="detail-text" id="library-sources">自动发现 Steam 创意工坊与 Wallpaper Engine 目录。</p>
+            <form id="library-directory-form">
+              <textarea id="library-directory" class="glass-input" rows="2" maxlength="6155" placeholder="额外本地目录（每行一个，最多 12 个）" spellcheck="false"></textarea>
+              <div class="detail-actions">
+                <button type="submit" class="glass-btn compact">保存并扫描</button>
+              </div>
+            </form>
+          </details>
+          <p class="lib-status" id="library-status" role="status" aria-live="polite">正在扫描壁纸库…</p>
+          <div id="library-grid" class="library-grid"></div>
+          <p id="library-empty" class="library-empty" hidden></p>
+          <div class="library-pagination">
+            <button type="button" class="glass-btn compact" id="library-prev">上一页</button>
+            <span id="library-page">0 / 0</span>
+            <button type="button" class="glass-btn compact" id="library-next">下一页</button>
+          </div>
+        </section>
+
+        <!-- TAB 2: 样式（精简卡片式设计） -->
+        <section class="tab-panel" id="tab-style" role="tabpanel" hidden>
+          <div class="glass-card">
+            <div class="card-head"><h2>氛围主题</h2></div>
+            <div class="theme-grid">
+              <button type="button" class="theme-tile midnight" data-theme="midnight" aria-pressed="true">
+                <span class="theme-preview"></span>
+                <span class="theme-name">午夜蓝</span>
+              </button>
+              <button type="button" class="theme-tile frost" data-theme="frost" aria-pressed="false">
+                <span class="theme-preview"></span>
+                <span class="theme-name">薄雾白</span>
+              </button>
+              <button type="button" class="theme-tile ember" data-theme="ember" aria-pressed="false">
+                <span class="theme-preview"></span>
+                <span class="theme-name">暖余晖</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-head"><h2>玻璃与阅读</h2></div>
+            <label class="slider-row"><span class="s-label">玻璃模糊</span><input id="blur" name="blur" type="range" min="0" max="32" value="16"><output id="blur-value" class="val-pill">16px</output></label>
+            <label class="slider-row"><span class="s-label">面板通透</span><input id="opacity" name="opacity" type="range" min="10" max="95" value="58"><output id="opacity-value" class="val-pill">58%</output></label>
+            <label class="slider-row"><span class="s-label">背景暗化</span><input id="scrim" name="scrim" type="range" min="0" max="85" value="40"><output id="scrim-value" class="val-pill">40%</output></label>
+            <label class="slider-row"><span class="s-label">边框高光</span><input id="border" name="border" type="range" min="0" max="50" value="18"><output id="border-value" class="val-pill">18%</output></label>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-head"><h2>壁纸与播放</h2></div>
+            <div class="seg-row">
+              <span class="s-label">适配</span>
+              <div class="seg-pills fit-pills" id="fit-group" role="group" aria-label="画面适配">
+                <button type="button" class="pill-opt active" data-fit="cover">覆盖</button>
+                <button type="button" class="pill-opt" data-fit="contain">填充</button>
+                <button type="button" class="pill-opt" data-fit="center">居中</button>
+                <button type="button" class="pill-opt" data-fit="stretch">拉伸</button>
+              </div>
+            </div>
+            <label class="slider-row"><span class="s-label">壁纸模糊</span><input id="wallpaperBlur" name="wallpaperBlur" type="range" min="0" max="20" value="0"><output id="wallpaperBlur-value" class="val-pill">0px</output></label>
+            <label class="slider-row"><span class="s-label">声音音量</span><input id="volume" name="volume" type="range" min="0" max="100" value="0"><output id="volume-value" class="val-pill">0%</output></label>
+            <div class="switch-row">
+              <span class="s-label">窗口隐藏时暂停</span>
+              <label class="ios-switch"><input type="checkbox" id="pauseWhenHidden" name="pauseWhenHidden" checked><span class="ios-track"></span></label>
+            </div>
+            <div class="switch-row">
+              <span class="s-label">场景鼠标视差</span>
+              <label class="ios-switch"><input type="checkbox" id="pointerParallax" name="pointerParallax" checked><span class="ios-track"></span></label>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-head"><h2>猫娘桌宠</h2></div>
+            <div class="switch-row">
+              <span class="s-label">显示聊天框右侧桌宠</span>
+              <label class="ios-switch"><input type="checkbox" id="petEnabled" name="petEnabled" checked><span class="ios-track"></span></label>
+            </div>
+            <label class="slider-row"><span class="s-label">桌宠大小</span><input id="petSize" name="petSize" type="range" min="60" max="140" value="92"><output id="petSize-value" class="val-pill">92px</output></label>
+          </div>
+
+          <div class="glass-card" id="scene-props-section" hidden>
+            <div class="card-head"><h2>场景自定义属性</h2></div>
+            <div id="scene-props-list" class="scene-props-list"></div>
+          </div>
+
+          <details class="glass-details accordion-card">
+            <summary>画面精调与高级玻璃</summary>
+            <div class="accordion-body">
+              <label class="slider-row"><span class="s-label">亮度</span><input id="brightness" name="brightness" type="range" min="20" max="200" value="100"><output id="brightness-value" class="val-pill">100%</output></label>
+              <label class="slider-row"><span class="s-label">对比度</span><input id="contrast" name="contrast" type="range" min="20" max="200" value="100"><output id="contrast-value" class="val-pill">100%</output></label>
+              <label class="slider-row"><span class="s-label">饱和度</span><input id="saturation" name="saturation" type="range" min="0" max="200" value="100"><output id="saturation-value" class="val-pill">100%</output></label>
+              <label class="slider-row"><span class="s-label">缩放</span><input id="zoom" name="zoom" type="range" min="50" max="200" value="100"><output id="zoom-value" class="val-pill">100%</output></label>
+              <label class="slider-row"><span class="s-label">水平偏移</span><input id="posX" name="posX" type="range" min="0" max="100" value="50"><output id="posX-value" class="val-pill">50%</output></label>
+              <label class="slider-row"><span class="s-label">垂直偏移</span><input id="posY" name="posY" type="range" min="0" max="100" value="50"><output id="posY-value" class="val-pill">50%</output></label>
+              <label class="slider-row"><span class="s-label">壁纸透明</span><input id="wallpaperTransparency" name="wallpaperTransparency" type="range" min="0" max="100" value="0"><output id="wallpaperTransparency-value" class="val-pill">0%</output></label>
+              <label class="slider-row"><span class="s-label">面板圆角</span><input id="radius" name="radius" type="range" min="0" max="28" value="18"><output id="radius-value" class="val-pill">18px</output></label>
+              <label class="slider-row"><span class="s-label">玻璃饱和</span><input id="glassSaturation" name="glassSaturation" type="range" min="100" max="220" value="150"><output id="glassSaturation-value" class="val-pill">150%</output></label>
+              <div class="seg-row">
+                <span class="s-label">倍速</span>
+                <div class="seg-pills" id="rate-group" role="group" aria-label="播放倍速">
+                  <button type="button" class="pill-opt" data-rate="0.5">0.5x</button>
+                  <button type="button" class="pill-opt" data-rate="0.75">0.75x</button>
+                  <button type="button" class="pill-opt active" data-rate="1">1x</button>
+                  <button type="button" class="pill-opt" data-rate="1.25">1.25x</button>
+                  <button type="button" class="pill-opt" data-rate="1.5">1.5x</button>
+                  <button type="button" class="pill-opt" data-rate="2">2x</button>
+                </div>
+              </div>
+              <div class="switch-row">
+                <span class="s-label">水平翻转</span>
+                <label class="ios-switch"><input type="checkbox" id="flipX" name="flipX"><span class="ios-track"></span></label>
+              </div>
+            </div>
+          </details>
+
+          <details class="glass-details accordion-card">
+            <summary>字体与光标</summary>
+            <div class="accordion-body">
+              <label class="field-stack">
+                <span>界面字体（留空跟随系统）</span>
+                <input id="fontFamily" name="fontFamily" class="glass-input" type="text" maxlength="80" placeholder="如：PingFang SC, Microsoft YaHei" autocomplete="off" spellcheck="false">
+              </label>
+              <label class="slider-row"><span class="s-label">正文字号</span><input id="fontSize" name="fontSize" type="range" min="12" max="20" value="14"><output id="fontSize-value" class="val-pill">14px</output></label>
+              <div class="color-row">
+                <span class="s-label">光标颜色</span>
+                <div class="color-controls">
+                  <button type="button" class="color-dot" data-caret="#7dd3fc" style="background:#7dd3fc" title="冰蓝"></button>
+                  <button type="button" class="color-dot" data-caret="#2563eb" style="background:#2563eb" title="晴空蓝"></button>
+                  <button type="button" class="color-dot" data-caret="#f6ad7b" style="background:#f6ad7b" title="暖琥珀"></button>
+                  <input type="color" id="caret" name="caret" value="#7dd3fc" aria-label="自定义光标颜色">
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div class="footer-actions">
+            <button type="button" class="glass-btn compact" id="defaults">重置全部参数</button>
+            <button type="button" class="glass-btn compact" id="disable">恢复原界面</button>
+          </div>
+
+          <details class="glass-details">
+            <summary>隐私与兼容性说明</summary>
+            <p>内置离线 MIT 开源 WebWallGL 引擎，实时渲染本地 Scene/Web/Video/Image 壁纸。不改动 Antigravity 文件，不读取聊天，停用即还原。</p>
+          </details>
+        </section>
+      </div>
+
+      <footer class="drawer-footer">
+        <span id="save-state" role="status" aria-live="polite">就绪</span>
+        <span class="ver-tag">v1.0</span>
+      </footer>
+    </aside>
+  </div>
+</body>
+</html>

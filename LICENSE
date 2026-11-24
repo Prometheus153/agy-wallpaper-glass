@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Prometheus153
+Copyright (c) 2026 AGY Glass contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Appearance concepts were inspired by dsh-plugin-wallpaper-engine 1.4.0.
+AGY Glass is an independent implementation and does not bundle that plugin,
+third-party fonts, or Steam Workshop assets.
+Offline Scene wallpaper rendering bundles MIT-licensed WebWallGL under
+sidecars/glass/vendor/ (see sidecars/glass/vendor/webwallgl.LICENSE).

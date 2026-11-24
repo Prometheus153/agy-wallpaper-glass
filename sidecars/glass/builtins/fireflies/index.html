@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fireflies</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#1a1213}canvas{display:block;width:100%;height:100%}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
+const bugs = Array.from({ length: 95 }, () => ({
+  x: Math.random(), y: 0.15 + Math.random() * 0.8, r: 2 + Math.random() * 4.5,
+  sx: 0.3 + Math.random() * 0.9, sy: 0.3 + Math.random() * 0.8, p: Math.random() * 6.28, hue: 30 + Math.random() * 24,
+}));
+function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
+addEventListener('resize', resize); resize();
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
+window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
+function frame() {
+  t += 0.011 * speed;
+  const bg = ctx.createLinearGradient(0, 0, w * 0.4, h);
+  bg.addColorStop(0, '#2a1816'); bg.addColorStop(0.45, '#472821'); bg.addColorStop(1, '#181014');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  const glow = ctx.createRadialGradient(w * (0.5 + (mx - 0.5) * 0.1), h * (0.45 + (my - 0.5) * 0.08), 0, w * 0.5, h * 0.45, Math.min(w, h) * 0.65);
+  glow.addColorStop(0, 'rgba(245,158,11,0.22)'); glow.addColorStop(0.55, 'rgba(180,83,9,0.08)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const count = Math.min(bugs.length, Math.round(52 * density));
+  for (let i = 0; i < count; i++) {
+    const b = bugs[i];
+    const x = ((b.x + Math.sin(t * b.sx + b.p) * 0.045) * w + (mx - 0.5) * 28 + w) % w;
+    const y = ((b.y + Math.cos(t * b.sy + b.p * 1.3) * 0.04) * h + (my - 0.5) * 22 + h) % h;
+    const pulse = 0.22 + 0.78 * (0.5 + 0.5 * Math.sin(t * 2.4 + b.p));
+    const rad = b.r * 5.5;
+    const fg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    fg.addColorStop(0, `hsla(${b.hue},100%,86%,${pulse.toFixed(2)})`);
+    fg.addColorStop(0.35, `hsla(${b.hue},95%,62%,${(pulse * 0.48).toFixed(2)})`);
+    fg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.283); ctx.fill();
+  }
+  ctx.restore();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

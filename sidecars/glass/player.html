@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN" data-media-key="__MEDIA_KEY__" data-kind="__KIND__" data-preview="__PREVIEW__" data-init="__INIT__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AGY Glass Player</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; user-select: none; }
+    #stage { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; transform-origin: center center; will-change: transform; }
+    #stage > canvas, #stage > iframe, #stage > video, #stage > img { width: 100%; height: 100%; display: block; border: 0; }
+    #fallback { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; transform-origin: center center; }
+    #fallback.visible { display: block; }
+  </style>
+  <script defer src="/vendor/webwallgl.global.min.js"></script>
+  <script defer src="/player.js"></script>
+</head>
+<body>
+  <div id="stage"></div>
+  <img id="fallback" alt="">
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "agy-glass",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Wallpaper Engine backgrounds (Scene/Web via bundled WebWallGL, Video, Image) and iOS-style Liquid Glass styling Sidecar for Antigravity Desktop",
+  "homepage": "https://github.com/Prometheus153/agy-wallpaper-glass",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Prometheus153/agy-wallpaper-glass.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "preview": "node sidecars/glass/server.mjs --preview",
+    "test": "node --test tests/*.test.mjs",
+    "sync:vendor": "node -e \"import('node:fs').then(fs=>{fs.mkdirSync('sidecars/glass/vendor',{recursive:true});fs.copyFileSync('node_modules/webwallgl/webwallgl.global.min.js','sidecars/glass/vendor/webwallgl.global.min.js');fs.copyFileSync('node_modules/webwallgl/LICENSE','sidecars/glass/vendor/webwallgl.LICENSE');console.log('Synced webwallgl vendor bundle');})\"",
+    "pack:release": "node scripts/pack.mjs",
+    "install:local": "node scripts/install.mjs",
+    "update:local": "node scripts/install.mjs --update",
+    "uninstall:local": "node scripts/install.mjs --uninstall"
+  },
+  "files": [
+    "plugin.json",
+    "logo.svg",
+    "README.md",
+    "sidecars/",
+    "scripts/install.mjs",
+    "install.bat",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "webwallgl": "^3.0.3"
+  }
+}

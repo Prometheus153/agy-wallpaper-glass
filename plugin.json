@@ -1,0 +1,7 @@
+{
+  "name": "agy-glass",
+  "displayName": "AGY Glass · 液态玻璃壁纸库",
+  "version": "1.0.0",
+  "description": "Wallpaper Engine local Scene/Web/Video/Image wallpapers (via bundled offline WebWallGL) + 6 built-in animated wallpapers, iOS-style Liquid Glass surfaces, and an interactive animated catgirl desktop pet for Antigravity Desktop.",
+  "logo": "logo.svg"
+}

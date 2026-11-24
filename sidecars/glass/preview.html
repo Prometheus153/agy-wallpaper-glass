@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AGY Glass 效果预览</title>
+  <script defer src="./preview.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body, #root { margin: 0; width: 100%; height: 100%; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; overflow: hidden; }
+    body { background: #11151d; color: var(--foreground, #eef4fa); font-size: 13px; }
+    .agy-shell { display: flex; flex-direction: column; height: 100%; background: var(--background, #141820); }
+    header[data-testid="title-menu-bar"] {
+      height: 38px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 14px; font-size: 12px; color: var(--secondary-foreground, #c7d2e0); flex-shrink: 0;
+    }
+    .tb-left { display: flex; align-items: center; gap: 10px; }
+    .tb-brand { font-weight: 600; letter-spacing: 0.4px; color: var(--foreground, #fff); }
+    .tb-badge { font-size: 10px; padding: 1px 6px; border-radius: 5px; background: rgba(255,255,255,0.12); }
+    .tb-mode { color: var(--link, #67e8f9); font-size: 11.5px; }
+    [data-testid="pane-titlebar-toolbar"] { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px; }
+    [data-testid="pane-titlebar-toolbar"] button { font: inherit; font-size: 11px; padding: 3px 8px; border-radius: 7px; border: 0; background: transparent; cursor: pointer; }
+    .layout { display: flex; flex: 1; min-height: 0; }
+    .bg-sidebar {
+      width: 220px; min-width: 170px; flex-shrink: 0; background: var(--sidebar, #1c222d);
+      padding: 12px 10px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .new-chat {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 500;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border, rgba(255,255,255,0.14));
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px; padding: 7px 10px; border-radius: 8px;
+      color: var(--secondary-foreground, #c6d0dd); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .nav-item small { font-size: 10px; color: var(--link, #67e8f9); opacity: 0.85; }
+    .nav-item.active {
+      background: rgba(255,255,255,0.13); color: var(--foreground, #fff); font-weight: 500;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.14);
+    }
+    .nav-title { font-size: 10.5px; letter-spacing: 0.6px; color: var(--link, #67e8f9); margin: 10px 0 4px 8px; font-weight: 500; }
+    main[data-pane-id] {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 8px 28px 14px;
+      background: var(--background, transparent);
+    }
+    .pane-tabs { display: flex; gap: 18px; padding: 4px 0 10px; font-size: 12px; color: var(--muted-foreground, #9fb0c4); }
+    .pane-tabs .on { color: var(--foreground, #fff); font-weight: 600; border-bottom: 2px solid var(--link, #67e8f9); padding-bottom: 4px; }
+    [data-testid="conversation-view"] {
+      flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;
+      justify-content: center; gap: 16px; max-width: 680px; width: 100%; margin: 0 auto;
+    }
+    [data-testid="user-message-bubble"] {
+      align-self: flex-end; padding: 9px 14px; font-size: 13px; max-width: 80%;
+    }
+    .response { font-size: 13.5px; line-height: 1.75; }
+    .response h3 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+    .response ul { margin: 0 0 12px; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+    .response p { margin: 0; opacity: 0.92; }
+    .callout {
+      margin-top: 12px; padding: 9px 12px; border-left: 3px solid var(--link, #67e8f9);
+      background: rgba(14, 18, 28, 0.24); border-radius: 0 8px 8px 0; font-size: 12.5px;
+    }
+    .msg-meta { display: flex; align-items: center; gap: 14px; margin-top: 10px; font-size: 11px; color: var(--link, #67e8f9); opacity: 0.9; }
+    [data-testid="agent-input-box"] {
+      max-width: 680px; width: 100%; margin: 10px auto 4px; padding: 12px 14px 10px;
+    }
+    [data-testid="agent-input-box"] textarea {
+      width: 100%; height: 42px; resize: none; outline: none; background: transparent; border: 0;
+      color: var(--foreground, #eef4fa); font-family: inherit;
+    }
+    [data-testid="agent-input-box"] textarea::placeholder { color: var(--link, #67e8f9); opacity: 0.8; }
+    .composer-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; font-size: 11.5px; color: var(--secondary-foreground, #c7d2e0); }
+    .composer-right { display: flex; align-items: center; gap: 10px; }
+    .send-pill {
+      width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+      background: rgba(103, 232, 249, 0.28); border: 1px solid rgba(103, 232, 249, 0.45); color: #fff;
+    }
+    .mock-right-pane {
+      width: 240px; flex-shrink: 0; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px;
+      font-size: 12px; color: var(--secondary-foreground);
+    }
+    .mock-right-pane[hidden] { display: none; }
+    .mock-right-pane h4 { margin: 0 0 6px; font-size: 12.5px; color: var(--foreground); }
+    .mock-diff { font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 1.6; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.22); }
+    .mock-diff .add { color: #86efac; }
+    .mock-diff .del { color: #fca5a5; }
+    dialog { max-width: 380px; padding: 20px 22px; color: var(--foreground); }
+    dialog::backdrop { background: rgba(6, 10, 18, 0.45); backdrop-filter: blur(4px); }
+    dialog h4 { margin: 0 0 8px; font-size: 15px; }
+    dialog p { margin: 0 0 14px; font-size: 12.5px; line-height: 1.65; color: var(--secondary-foreground); }
+    dialog button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.1); color: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="agy-shell">
+      <header data-testid="title-menu-bar">
+        <div class="tb-left">
+          <span class="tb-brand">Antigravity</span>
+          <span class="tb-badge">LIQUID GLASS</span>
+          <span class="tb-mode">✦ 标准模式</span>
+        </div>
+        <div data-testid="pane-titlebar-toolbar">
+          <button id="toggle-mock-review" type="button">模拟审阅分栏</button>
+          <button id="show-settings" type="button">弹窗示意</button>
+        </div>
+      </header>
+      <div class="layout">
+        <aside class="bg-sidebar">
+          <div data-testid="sidebar-navigation-items">
+            <div class="new-chat">＋ 新会话</div>
+            <div class="nav-item"><span>❖ 插件</span></div>
+            <div class="nav-item"><span>⊞ 插件市场</span></div>
+            <div class="nav-item"><span>⏱ 自动化任务</span></div>
+            <div class="nav-title">工作区</div>
+            <div class="nav-item active"><span>液态玻璃与动态场景</span><small>刚刚</small></div>
+            <div class="nav-item"><span>WebWallGL 引擎集成</span><small>今天</small></div>
+            <div class="nav-item"><span>自定义字体与光标</span><small>2天</small></div>
+          </div>
+          <div data-testid="conversation-list-sidebar"></div>
+        </aside>
+        <main data-pane-id="preview" class="group/pane">
+          <div class="pane-tabs"><span class="on">对话</span><span>轨迹</span><span>上下文</span></div>
+          <div data-testid="conversation-view">
+            <div data-testid="user-message-bubble">帮我开启 Wallpaper Engine 动态场景壁纸，并配一套 iOS 液态玻璃界面。</div>
+            <div class="response">
+              <h3>已启用 AGY Glass 液态玻璃体验</h3>
+              <ul>
+                <li><strong>全格式本地壁纸</strong>：通过内置离线 WebWallGL 引擎实时渲染 Scene 场景与 Web 网页壁纸，视频与图片直出流式播放。</li>
+                <li><strong>高通透液态玻璃</strong>：侧边栏、底部输入框与设置弹窗采用多层毛玻璃、边缘高光折射与自适应暗化遮罩，背景再绚丽文字依然锐利。</li>
+                <li><strong>零摩擦实时调节</strong>：在右侧面板拖动亮度、对比度、饱和度、缩放、模糊或切换倍速与适配，画面所见即所得。</li>
+              </ul>
+              <div class="callout">提示：鼠标在画面上移动时，支持视差的 Scene 动态壁纸也会同步跟随互动；窗口隐藏时自动暂停以节省 GPU。</div>
+              <div class="msg-meta"><span>⚡ WebWallGL 实时渲染</span><span>❖ 液态玻璃材质</span></div>
+            </div>
+          </div>
+          <div data-testid="agent-input-box">
+            <textarea aria-label="预览输入框" placeholder="发消息或创建任务，/ 调用指令，@ 文件或对话（试试输入体验自定义字体与光标）…"></textarea>
+            <div class="composer-foot">
+              <span>＋ &nbsp; ⚙ 工作区修改</span>
+              <div class="composer-right"><span>AGY Glass 预览</span><span class="send-pill">↑</span></div>
+            </div>
+          </div>
+        </main>
+        <aside id="mock-review-pane" data-pane-id="review" class="mock-right-pane" hidden>
+          <h4>审阅 · config.mjs</h4>
+          <div class="mock-diff">
+            <div class="add">+ petEnabled: true,</div>
+            <div class="add">+ petSize: 92,</div>
+            <div class="del">- oldStaticTail: true</div>
+          </div>
+          <span>打开此栏时，猫娘桌宠会自动同步向左移动紧贴聊天区右边界。</span>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <dialog id="settings-dialog" role="dialog">
+    <h4>液态玻璃设置窗口</h4>
+    <p>对话框、下拉菜单与悬浮提示框均采用半透明液态玻璃材质与高光描边，确保深色/浅色背景下都能清晰阅读。</p>
+    <button id="close-settings" type="button">关闭</button>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "title": "雨夜霓虹 · Rainy Night",
+  "type": "web",
+  "file": "index.html",
+  "preview": "preview.png",
+  "general": {
+    "properties": {
+      "speed": {
+        "order": 0,
+        "text": "流动速度",
+        "type": "slider",
+        "value": 1,
+        "min": 0.2,
+        "max": 2.5,
+        "step": 0.1
+      },
+      "density": {
+        "order": 1,
+        "text": "粒子密度",
+        "type": "slider",
+        "value": 1,
+        "min": 0.3,
+        "max": 2,
+        "step": 0.1
+      }
+    }
+  }
+}
