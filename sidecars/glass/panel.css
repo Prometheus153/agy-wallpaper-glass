@@ -286,6 +286,7 @@ textarea.glass-input { height: auto; padding: 7px 9px; resize: vertical; min-hei
 
 /* Wallpaper Library */
 .lib-search-row, .import-row, .folder-import-box { display: flex; align-items: center; gap: 6px; }
+.folder-import-box[hidden] { display: none !important; }
 .import-btn { flex: 1; font-size: 11.5px; height: 29px; }
 .upload-label { position: relative; overflow: hidden; cursor: pointer; }
 .upload-label input { position: absolute; width: 1px; height: 1px; opacity: 0; }
