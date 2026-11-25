@@ -50,21 +50,29 @@ function publicError(error) {
   return error instanceof LibraryError ? error : new LibraryError('无法读取壁纸库，请检查目录和访问权限');
 }
 
-export function validateLibraryDirectory(value) {
+export function validateLibraryDirectory(value, { platform = process.platform, homeDir = homedir() } = {}) {
   if (typeof value !== 'string' || value.length > 512 || /[\x00-\x1f\x7f]/.test(value)) {
     throw new LibraryError('壁纸库目录无效：请输入不超过 512 字符的本机绝对目录');
   }
-  const directory = value.trim();
+  const isWin = platform === 'win32';
+  const p = isWin ? path.win32 : path.posix;
+  let directory = value.trim();
   if (!directory) return '';
-  if (/^[\\/]{2}/.test(directory) || (windows
+  if (!isWin && (directory === '~' || directory.startsWith('~/'))) {
+    directory = directory === '~' ? homeDir : p.join(homeDir, directory.slice(2));
+    if (directory.length > 512 || /[\x00-\x1f\x7f]/.test(directory)) {
+      throw new LibraryError('壁纸库目录无效：请输入不超过 512 字符的本机绝对目录');
+    }
+  }
+  if (/^[\\/]{2}/.test(directory) || (isWin
     ? !/^[a-z]:[\\/]/i.test(directory) || /[<>:"|?*]/.test(directory.slice(2))
     : !path.posix.isAbsolute(directory) || directory.includes('\\'))) {
     throw new LibraryError('壁纸库目录必须是本机绝对目录，不支持网络路径');
   }
-  return path.normalize(directory);
+  return p.normalize(directory);
 }
 
-const keyFor = value => windows ? value.toLowerCase() : value;
+const keyFor = (value, platform = process.platform) => platform === 'win32' ? value.toLowerCase() : value;
 const samePath = (a, b) => keyFor(a) === keyFor(b);
 function contained(root, target) {
   const relative = path.relative(keyFor(root), keyFor(target));
@@ -241,38 +249,39 @@ async function libraryFolders(directory) {
   return paths;
 }
 
-export function validateLibraryDirectories(value) {
+export function validateLibraryDirectories(value, opts = {}) {
   const values = typeof value === 'string' ? [value] : value;
   if (!Array.isArray(values) || values.length > 12) throw new LibraryError('最多添加 12 个本机壁纸目录');
   const unique = new Map();
   for (const item of values) {
-    const directory = validateLibraryDirectory(item);
-    if (directory) unique.set(keyFor(directory), directory);
+    const directory = validateLibraryDirectory(item, opts);
+    if (directory) unique.set(keyFor(directory, opts.platform), directory);
   }
   return [...unique.values()];
 }
 
-export async function discoverLibraryRoots(directory = '', { env = process.env } = {}) {
-  const directories = validateLibraryDirectories(directory);
+export async function discoverLibraryRoots(directory = '', { env = process.env, platform = process.platform, homeDir = homedir() } = {}) {
+  const isWin = platform === 'win32';
+  const directories = validateLibraryDirectories(directory, { platform, homeDir });
   const roots = new Map();
   const add = async (candidate, source) => {
     const canonical = await optionalDirectory(candidate);
-    if (canonical && !roots.has(keyFor(canonical))) roots.set(keyFor(canonical), { path: canonical, source });
+    if (canonical && !roots.has(keyFor(canonical, platform))) roots.set(keyFor(canonical, platform), { path: canonical, source });
   };
   const addInstallation = async installation => {
     for (const suffix of ['projects/defaultprojects', 'projects/myprojects', 'projects']) {
       await add(path.join(installation, suffix), 'Wallpaper Engine');
     }
   };
-  const steamCandidates = windows
+  const steamCandidates = isWin
     ? [...(await registrySteamPaths()),
       path.join(env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Steam'),
       path.join(env.ProgramFiles || 'C:\\Program Files', 'Steam'),
       ...'CDEFGHIJKLMNOPQRSTUVWXYZ'.split('').flatMap(drive => [`${drive}:\\Steam`, `${drive}:\\SteamLibrary`])]
-    : process.platform === 'darwin'
-      ? [path.join(homedir(), 'Library/Application Support/Steam')]
-      : ['.steam/steam', '.local/share/Steam', '.var/app/com.valvesoftware.Steam/data/Steam'].map(suffix => path.join(homedir(), suffix));
-  const regWe = await registryWallpaperEnginePath();
+    : platform === 'darwin'
+      ? [path.join(homeDir, 'Library/Application Support/Steam')]
+      : ['.steam/steam', '.local/share/Steam', '.var/app/com.valvesoftware.Steam/data/Steam'].map(suffix => path.join(homeDir, suffix));
+  const regWe = isWin ? await registryWallpaperEnginePath() : '';
   if (regWe) {
     await addInstallation(regWe);
     const maybeCommon = path.dirname(regWe);
@@ -281,8 +290,12 @@ export async function discoverLibraryRoots(directory = '', { env = process.env }
       steamCandidates.push(path.dirname(maybeSteamapps));
     }
   }
-  for (const value of (env.AGY_GLASS_STEAM_ROOT || '').split(/[;\r\n]/)) {
-    try { if (validateLibraryDirectory(value)) steamCandidates.push(value); } catch {}
+  const envSplit = isWin ? /[;\r\n]/ : /[:;\r\n]/;
+  for (const value of (env.AGY_GLASS_STEAM_ROOT || '').split(envSplit)) {
+    try {
+      const normalized = validateLibraryDirectory(value, { platform, homeDir });
+      if (normalized) steamCandidates.push(normalized);
+    } catch {}
   }
   for (const dir of directories) {
     const manual = await canonicalDirectory(dir);
@@ -322,7 +335,7 @@ async function readProject(entry) {
 
 function projectType(project) {
   const extension = typeof project.file === 'string' ? path.posix.extname(project.file.replace(/\\/g, '/')).toLowerCase() : '';
-  if (extension === '.exe') return 'application';
+  if (['.exe', '.app', '.dmg', '.command', '.sh'].includes(extension)) return 'application';
   if (project.type == null || project.type === '') {
     return mediaMimeTypes.get(extension)?.split('/')[0] || ({ '.json': 'scene', '.pkg': 'scene', '.html': 'web', '.htm': 'web' })[extension] || 'unknown';
   }
@@ -548,8 +561,8 @@ async function openAsset(reference, assetPath) {
   const entry = validateLibraryReference(reference);
   const relative = relativeFile(assetPath);
   const ext = path.extname(relative).toLowerCase();
-  // Never serve executable binaries from project directories
-  if (['.exe', '.dll', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.com', '.scr'].includes(ext)) {
+  // Never serve executable binaries or scripts from project directories (scene.pkg stays allowed)
+  if (['.exe', '.dll', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.com', '.scr', '.sh', '.command', '.dylib', '.so', '.app', '.dmg', '.scpt', '.applescript'].includes(ext)) {
     throw new LibraryError('不允许读取可执行文件');
   }
   const { file, check } = await resolveInside(entry, relative);

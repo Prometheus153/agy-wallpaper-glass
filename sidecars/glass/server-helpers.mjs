@@ -139,23 +139,57 @@ export async function saveImportedPkg(req, dataDir) {
   }
 }
 
-export async function pickLocalDirectory() {
-  if (process.platform !== 'win32') {
-    throw Object.assign(new Error('当前系统请直接粘贴本地文件夹路径'), { status: 400 });
+export async function pickLocalDirectory({ platform = process.platform, exec = promisify(execFile) } = {}) {
+  if (platform === 'win32') {
+    const script = [
+      'Add-Type -AssemblyName System.Windows.Forms',
+      '$dlg = New-Object System.Windows.Forms.FolderBrowserDialog',
+      '$dlg.Description = "选择 Wallpaper Engine 场景/网页壁纸目录或壁纸库文件夹"',
+      '$dlg.ShowNewFolderButton = $false',
+      'if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dlg.SelectedPath) }',
+    ].join('; ');
+    const { stdout } = await exec('powershell.exe', ['-NoProfile', '-STA', '-Command', script], {
+      timeout: 120000,
+      maxBuffer: 16 * 1024,
+      windowsHide: true,
+      shell: false,
+    });
+    const chosen = String(stdout || '').trim();
+    return chosen ? { cancelled: false, directory: chosen } : { cancelled: true, directory: '' };
   }
-  const script = [
-    'Add-Type -AssemblyName System.Windows.Forms',
-    '$dlg = New-Object System.Windows.Forms.FolderBrowserDialog',
-    '$dlg.Description = "选择 Wallpaper Engine 场景/网页壁纸目录或壁纸库文件夹"',
-    '$dlg.ShowNewFolderButton = $false',
-    'if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dlg.SelectedPath) }',
-  ].join('; ');
-  const { stdout } = await promisify(execFile)('powershell.exe', ['-NoProfile', '-STA', '-Command', script], {
-    timeout: 120000,
-    maxBuffer: 16 * 1024,
-    windowsHide: true,
-    shell: false,
-  });
-  const chosen = stdout.trim();
-  return chosen ? { cancelled: false, directory: chosen } : { cancelled: true, directory: '' };
+
+  if (platform === 'darwin') {
+    const script = 'POSIX path of (choose folder with prompt "选择 Wallpaper Engine 场景/网页壁纸目录或壁纸库文件夹 (Select Wallpaper Folder)")';
+    try {
+      const { stdout } = await exec('/usr/bin/osascript', ['-e', script], {
+        timeout: 120000,
+        maxBuffer: 16 * 1024,
+        shell: false,
+      });
+      const raw = String(stdout || '').trim();
+      const chosen = raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
+      return chosen ? { cancelled: false, directory: chosen } : { cancelled: true, directory: '' };
+    } catch (err) {
+      const detail = `${err?.stderr || ''} ${err?.message || ''}`;
+      if (err?.code === 1 && /(-128|User canceled|用户已取消)/i.test(detail)) {
+        return { cancelled: true, directory: '' };
+      }
+      throw Object.assign(new Error('无法打开访达文件夹选择器，请直接粘贴本地文件夹路径'), { status: 400 });
+    }
+  }
+
+  if (platform === 'linux') {
+    try {
+      const { stdout } = await exec('zenity', [
+        '--file-selection', '--directory',
+        '--title=Select Wallpaper Engine / Web Wallpaper Folder',
+      ], { timeout: 120000, maxBuffer: 16 * 1024, shell: false });
+      const chosen = String(stdout || '').trim();
+      return chosen ? { cancelled: false, directory: chosen } : { cancelled: true, directory: '' };
+    } catch (err) {
+      if (err?.code === 1) return { cancelled: true, directory: '' };
+    }
+  }
+
+  throw Object.assign(new Error('当前系统请直接粘贴本地文件夹路径'), { status: 400 });
 }

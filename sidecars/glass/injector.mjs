@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
-import { isAbsolute, join } from 'node:path';
+import path, { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const INTERVAL_MS = 3000;
@@ -63,13 +63,14 @@ export function isEligibleContext(context, frameId, origin) {
     context.uniqueId.length > 0 && context.uniqueId.length <= 256;
 }
 
-function portFile(env) {
+export function portFile(env = process.env, { platform = process.platform, homeDir = os.homedir() } = {}) {
+  const p = platform === 'win32' ? path.win32 : path.posix;
   let root;
-  if (process.platform === 'win32') root = env.APPDATA;
-  else if (process.platform === 'darwin') root = join(os.homedir(), 'Library', 'Application Support');
-  else if (process.platform === 'linux') root = env.XDG_CONFIG_HOME || join(os.homedir(), '.config');
-  if (typeof root !== 'string' || !isAbsolute(root)) return null;
-  return join(root, 'Antigravity', 'DevToolsActivePort');
+  if (platform === 'win32') root = env.APPDATA;
+  else if (platform === 'darwin') root = p.join(homeDir, 'Library', 'Application Support');
+  else if (platform === 'linux') root = env.XDG_CONFIG_HOME || p.join(homeDir, '.config');
+  if (typeof root !== 'string' || !p.isAbsolute(root)) return null;
+  return p.join(root, 'Antigravity', 'DevToolsActivePort');
 }
 
 // runtimeSource is trusted main-thread code, never a string obtained from CDP.
@@ -103,7 +104,7 @@ function expression(action, owner, origin, payload, runtimeSource) {
   return `(()=>{${guard}${body}})()`;
 }
 
-export function startInjector({ getPayload, runtimeSource, env = process.env, onStatus } = {}) {
+export function startInjector({ getPayload, runtimeSource, env = process.env, onStatus, platform = process.platform, homeDir = os.homedir() } = {}) {
   const owner = randomUUID();
   const lifetime = new AbortController();
   const sockets = new Map();
@@ -297,7 +298,7 @@ export function startInjector({ getPayload, runtimeSource, env = process.env, on
     const address = parseLsAddress(env.ANTIGRAVITY_LS_ADDRESS);
     const token = env.ANTIGRAVITY_CSRF_TOKEN;
     if (!address || typeof token !== 'string' || !token) { verification = null; return null; }
-    const text = await readText(join(os.homedir(), '.gemini', 'antigravity', 'daemon', `hub_${address.port}.json`));
+    const text = await readText(join(homeDir, '.gemini', 'antigravity', 'daemon', `hub_${address.port}.json`));
     let hub;
     try { hub = JSON.parse(text); } catch { verification = null; return null; }
     if (hub?.httpPort !== address.port || typeof hub.httpsPort !== 'number' || !parsePort(hub.httpsPort)) {
@@ -321,7 +322,7 @@ export function startInjector({ getPayload, runtimeSource, env = process.env, on
   }
 
   async function targets(origin) {
-    const file = portFile(env);
+    const file = portFile(env, { platform, homeDir });
     if (!file) throw new Unsupported();
     const text = await readText(file);
     if (text === null) return [];

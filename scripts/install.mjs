@@ -1,4 +1,4 @@
-import { mkdir, lstat, readFile, cp, rename, rm } from 'node:fs/promises';
+import { chmod, cp, lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { homedir } from 'node:os';
@@ -6,11 +6,38 @@ import { randomUUID } from 'node:crypto';
 
 export const PLUGIN_NAME = 'agy-wallpaper-glass';
 export const LEGACY_PLUGIN_NAME = 'agy-glass';
+export const MIN_NODE_MAJOR = 22;
+export const MIN_NODE_MINOR = 12;
 
 const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultPlugins = join(homedir(), '.gemini', 'config', 'plugins');
 const files = ['plugin.json', 'logo.svg', 'sidecars', 'LICENSE'];
 const optionalFiles = ['README.md', 'README.zh-CN.md'];
+
+export function isSupportedNodeVersion(version = process.versions.node) {
+  const parts = String(version || '').replace(/^v/i, '').split('.').map(Number);
+  if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) return false;
+  return parts[0] > MIN_NODE_MAJOR || (parts[0] === MIN_NODE_MAJOR && parts[1] >= MIN_NODE_MINOR);
+}
+
+async function configureMacSidecarLauncher(stagingRoot, nodeExecPath) {
+  const glassDir = join(stagingRoot, 'sidecars', 'glass');
+  const sidecarJsonPath = join(glassDir, 'sidecar.json');
+  const launcherPath = join(glassDir, 'launch-mac.sh');
+
+  const launcherRaw = await readFile(launcherPath, 'utf8');
+  await writeFile(launcherPath, launcherRaw.replace(/\r\n/g, '\n'), 'utf8');
+  try { await chmod(launcherPath, 0o755); } catch { /* ignore on non-POSIX filesystems */ }
+
+  if (typeof nodeExecPath === 'string' && nodeExecPath.trim()) {
+    await writeFile(join(glassDir, '.node-bin'), `${nodeExecPath.trim()}\n`, 'utf8');
+  }
+
+  const sidecarMeta = JSON.parse(await readFile(sidecarJsonPath, 'utf8'));
+  sidecarMeta.command = '/bin/sh';
+  sidecarMeta.args = ['launch-mac.sh'];
+  await writeFile(sidecarJsonPath, `${JSON.stringify(sidecarMeta, null, 2)}\n`, 'utf8');
+}
 
 async function inspectPluginDir(dir, expectedName) {
   let info;
@@ -26,12 +53,30 @@ async function inspectPluginDir(dir, expectedName) {
   return { exists: true, info, meta };
 }
 
-export async function installPlugin({ source = sourceRoot, plugins = defaultPlugins, update = false, uninstall = false, dryRun = false } = {}) {
+export async function installPlugin({
+  source = sourceRoot,
+  plugins = defaultPlugins,
+  update = false,
+  uninstall = false,
+  dryRun = false,
+  platform = process.platform,
+  nodeExecPath = process.execPath,
+  nodeVersion = process.versions.node,
+} = {}) {
   if (update && uninstall) throw new Error('更新与卸载不能同时执行');
+  if (!uninstall && !dryRun && !isSupportedNodeVersion(nodeVersion)) {
+    throw new Error(`需要 Node.js >= ${MIN_NODE_MAJOR}.${MIN_NODE_MINOR}.0（当前为 v${nodeVersion}），请先升级 Node.js。`);
+  }
   const target = join(plugins, PLUGIN_NAME);
   const legacyTarget = join(plugins, LEGACY_PLUGIN_NAME);
   const operation = uninstall ? 'uninstall' : update ? 'update' : 'install';
-  if (dryRun) return { operation, source, target, files, modifiesApp: false, enablesDebugPort: false, preservesUserData: true };
+  if (dryRun) {
+    return {
+      operation, source, target, files, platform,
+      macSidecarLauncher: platform === 'darwin',
+      modifiesApp: false, enablesDebugPort: false, preservesUserData: true,
+    };
+  }
 
   const current = await inspectPluginDir(target, PLUGIN_NAME);
   let legacy = { exists: false };
@@ -67,6 +112,11 @@ export async function installPlugin({ source = sourceRoot, plugins = defaultPlug
       try { await cp(join(source, file), join(staging, file), { recursive: true, errorOnExist: true, force: false }); }
       catch (err) { if (err.code !== 'ENOENT') throw err; }
     }
+    const macSidecarLauncher = platform === 'darwin';
+    if (macSidecarLauncher) {
+      await configureMacSidecarLauncher(staging, nodeExecPath);
+    }
+
     if (backup) {
       await cp(target, backup, { recursive: true, errorOnExist: true, force: false });
       try {
@@ -74,6 +124,9 @@ export async function installPlugin({ source = sourceRoot, plugins = defaultPlug
         for (const file of optionalFiles) {
           try { await cp(join(staging, file), join(target, file), { recursive: true }); }
           catch (err) { if (err.code !== 'ENOENT') throw err; }
+        }
+        if (macSidecarLauncher) {
+          try { await chmod(join(target, 'sidecars', 'glass', 'launch-mac.sh'), 0o755); } catch {}
         }
       } catch (error) {
         await cp(backup, target, { recursive: true });
@@ -102,6 +155,7 @@ export async function installPlugin({ source = sourceRoot, plugins = defaultPlug
       backup: backup || legacyBackup,
       migratedFrom: legacyBackup ? LEGACY_PLUGIN_NAME : null,
       legacyCleanupRequired,
+      macSidecarLauncher,
       preservesUserData: true,
     };
   } finally {
@@ -113,7 +167,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   if (args.some(arg => !['--help', '--dry-run', '--update', '--uninstall'].includes(arg))) throw new Error('未知参数；使用 --help 查看说明');
   if (args.includes('--help')) {
-    console.log(`AGY Wallpaper Glass v1.1.0 (${PLUGIN_NAME}) · Antigravity Desktop Liquid Glass & Wallpaper Engine Plugin
+    console.log(`AGY Wallpaper Glass v1.2.0 (${PLUGIN_NAME}) · Windows & macOS Antigravity Desktop Plugin
 Requires Node.js >=22.12 and Antigravity Desktop local DevTools port.
 node scripts/install.mjs             First-time install (disabled by default)
 node scripts/install.mjs --update    Update / migrate legacy agy-glass with backup
@@ -124,9 +178,12 @@ Target: ~/.gemini/config/plugins/${PLUGIN_NAME} (bundled offline WebWallGL, zero
     const result = await installPlugin({ update: args.includes('--update'), uninstall: args.includes('--uninstall'), dryRun: args.includes('--dry-run') });
     console.log(JSON.stringify(result, null, 2));
     if (!args.includes('--dry-run')) {
-      console.log('Done! Re-enable AGY Wallpaper Glass in Antigravity Customizations → Installed. User settings & wallpapers are preserved.');
+      console.log('Done! Enable AGY Wallpaper Glass in Antigravity Customizations → Installed. User settings & wallpapers are preserved.');
+      if (result.macSidecarLauncher) {
+        console.log('macOS launcher configured (/bin/sh launch-mac.sh + recorded Node path) for Finder/Dock GUI launches.');
+      }
       if (result.legacyCleanupRequired) {
-        console.log('Note: Legacy agy-glass is currently running in Antigravity (locked by Windows). Please disable/remove old "AGY Glass" in Customizations → Installed, then enable "AGY Wallpaper Glass".');
+        console.log('Note: Legacy agy-glass is currently running in Antigravity. Please disable/remove old "AGY Glass" in Customizations → Installed, then enable "AGY Wallpaper Glass".');
       }
     }
   }

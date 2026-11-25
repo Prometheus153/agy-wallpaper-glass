@@ -391,7 +391,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
 
   // Pointer interactions: vertical drag + click drawer toggle + hover peek + right-click menu
   function onPointerDown(e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || e.ctrlKey) return;
     hideMenu();
     pointerDown = true;
     dragging = false;
