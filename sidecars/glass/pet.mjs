@@ -5,7 +5,9 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   const SEAM_RATIO = 0.9413;
   const DRAWER_W = 336;
   const THEMES = ['midnight', 'frost', 'ember'];
-  const THEME_NAMES = { midnight: '午夜蓝', frost: '薄雾白', ember: '暖余晖' };
+  const getLang = () => (typeof resolveLanguage === 'function' ? resolveLanguage(settings?.language) : 'zh-CN');
+  const L = (key, vars) => (typeof tr === 'function' ? tr(getLang(), key, vars) : key);
+  const themeLabel = t => L(t === 'frost' ? 'themeFrost' : t === 'ember' ? 'themeEmber' : 'themeMidnight');
 
   let settings = getSettings();
   let disposed = false;
@@ -33,19 +35,20 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   // Floating liquid-glass drawer host (only used in live Antigravity Desktop, not preview iframe)
   let drawerHost = null;
   let drawerFrame = null;
+  let closeBtn = null;
   if (!isPreview && drawerUrl) {
     drawerHost = document.createElement('div');
     drawerHost.id = 'agy-glass-drawer-host';
     drawerHost.setAttribute('data-open', 'false');
-    const closeBtn = document.createElement('button');
+    closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.id = 'agy-glass-drawer-close';
     closeBtn.textContent = '×';
-    closeBtn.title = '收起壁纸面板';
+    closeBtn.title = L('petCloseDrawer');
     closeBtn.addEventListener('click', () => setDrawerOpen(false));
     drawerFrame = document.createElement('iframe');
     drawerFrame.id = 'agy-glass-drawer-frame';
-    drawerFrame.title = 'AGY Glass 控制面板';
+    drawerFrame.title = L('petFrameTitle');
     drawerFrame.src = drawerUrl;
     drawerFrame.addEventListener('load', () => { drawerLoaded = true; });
     drawerHost.append(closeBtn, drawerFrame);
@@ -61,8 +64,8 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   hit.id = 'agy-glass-pet-hit';
   hit.setAttribute('role', 'button');
   hit.setAttribute('tabindex', '0');
-  hit.setAttribute('aria-label', 'AGY Glass 桌宠：点击打开面板，上下拖动调整高度，右键打开快捷菜单');
-  hit.title = '点击打开壁纸面板 · 上下拖动改高度 · 右键菜单';
+  hit.setAttribute('aria-label', L('petAria'));
+  hit.title = L('petTitle');
   root.append(canvas, hit);
   document.body.append(root);
 
@@ -216,10 +219,10 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     menu.replaceChildren();
     const nextTheme = THEMES[(THEMES.indexOf(settings?.theme) + 1) % THEMES.length];
     const items = [
-      ...(drawerHost ? [{ label: drawerOpen ? '收起壁纸面板' : '打开壁纸面板', run: () => setDrawerOpen(!drawerOpen) }] : []),
-      { label: settings?.paused ? '继续播放壁纸' : '暂停壁纸', run: () => dispatchPatch({ paused: !settings?.paused }) },
-      { label: `切换主题 → ${THEME_NAMES[nextTheme]}`, run: () => dispatchPatch({ theme: nextTheme }) },
-      { label: '暂时隐藏桌宠', run: () => { setDrawerOpen(false); dispatchPatch({ petEnabled: false }); } },
+      ...(drawerHost ? [{ label: L(drawerOpen ? 'petMenuClose' : 'petMenuOpen'), run: () => setDrawerOpen(!drawerOpen) }] : []),
+      { label: L(settings?.paused ? 'petMenuResume' : 'petMenuPause'), run: () => dispatchPatch({ paused: !settings?.paused }) },
+      { label: L('petMenuTheme', { theme: themeLabel(nextTheme) }), run: () => dispatchPatch({ theme: nextTheme }) },
+      { label: L('petMenuHide'), run: () => { setDrawerOpen(false); dispatchPatch({ petEnabled: false }); } },
     ];
     for (const item of items) {
       const btn = document.createElement('button');
@@ -322,9 +325,12 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     const ctx = canvas.getContext?.('2d');
     if (!ctx) return;
 
+    const minFrameMs = (hovered || dragging || excitedT > 0.02) ? 14 : 30;
+    if (lastFrameAt && now - lastFrameAt < minFrameMs) return;
+
     const dt = lastFrameAt ? Math.min(0.05, Math.max(0.004, (now - lastFrameAt) / 1000)) : 0.016;
     lastFrameAt = now;
-    if (now - lastLayoutAt > 120) {
+    if (now - lastLayoutAt > 180) {
       lastLayoutAt = now;
       const r = findChatPaneRect();
       if (Math.abs(r.right - lastPaneRight) > 1) {
@@ -350,7 +356,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     const isWinking = wallNow < winkUntil;
 
     const d = dims();
-    const dpr = Math.min(2, globalThis.devicePixelRatio || 1);
+    const dpr = Math.min(1.5, globalThis.devicePixelRatio || 1);
     const pw = Math.round(d.canvasW * dpr);
     const ph = Math.round(d.canvasH * dpr);
     if (canvas.width !== pw || canvas.height !== ph) {
@@ -471,13 +477,25 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
       observedPane = pane;
     }
   }
+  let moTimer = 0;
   if (typeof MutationObserver === 'function' && document.body) {
-    mo = new MutationObserver(() => { bindPaneObserver(); layout(false); });
-    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    mo = new MutationObserver(() => {
+      if (moTimer) return;
+      moTimer = setTimeout(() => {
+        moTimer = 0;
+        if (!disposed) { bindPaneObserver(); layout(false); }
+      }, 150);
+    });
+    // Only observe direct childList on body (portals/dialogs) to avoid layout thrashing on chat streaming tokens
+    mo.observe(document.body, { childList: true });
   }
 
   function update(nextSettings) {
     settings = nextSettings;
+    hit.setAttribute('aria-label', L('petAria'));
+    hit.title = L('petTitle');
+    if (closeBtn) closeBtn.title = L('petCloseDrawer');
+    if (drawerFrame) drawerFrame.title = L('petFrameTitle');
     const visible = Boolean(settings?.enabled && settings?.petEnabled !== false);
     root.hidden = !visible;
     if (!visible) {
@@ -493,6 +511,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     if (disposed) return;
     disposed = true;
     if (rafId && typeof globalThis.cancelAnimationFrame === 'function') globalThis.cancelAnimationFrame(rafId);
+    if (moTimer) { clearTimeout(moTimer); moTimer = 0; }
     ro?.disconnect();
     mo?.disconnect();
     document.removeEventListener('pointerdown', onDocPointerDown);

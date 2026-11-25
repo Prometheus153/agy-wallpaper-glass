@@ -20,6 +20,8 @@
     zoom: Number.isFinite(initial.zoom) ? initial.zoom : 100,
     flipX: Boolean(initial.flipX),
     pointerParallax: initial.pointerParallax !== false,
+    performanceMode: ['eco', 'balanced', 'ultra'].includes(initial.performanceMode) ? initial.performanceMode : 'balanced',
+    fpsLimit: [30, 45, 60].includes(initial.fpsLimit) ? initial.fpsLimit : 30,
     properties: initial.properties && typeof initial.properties === 'object' ? initial.properties : {},
   };
 
@@ -27,7 +29,34 @@
   let mounting = false;
   let destroyed = false;
   let hostHidden = false;
+  let appliedRenderDpr = 0;
+  let lastPropsJson = '';
+  let lastPerfMode = '';
+  let lastFps = 0;
   const reducedMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false, addEventListener() {} };
+
+  function perfProfile(mode) {
+    const devDpr = Math.max(1, window.devicePixelRatio || 1);
+    if (mode === 'eco') {
+      return {
+        renderDpr: 1,
+        videoTexScale: 0.75,
+        quality: { antiAliasing: 'off', particles: 'low', postProcessing: 'low' },
+      };
+    }
+    if (mode === 'ultra') {
+      return {
+        renderDpr: Math.min(2, devDpr),
+        videoTexScale: 1,
+        quality: { antiAliasing: 'off', particles: 'high', postProcessing: 'high' },
+      };
+    }
+    return {
+      renderDpr: Math.min(1.25, devDpr),
+      videoTexScale: 0,
+      quality: { antiAliasing: 'off', particles: 'medium', postProcessing: 'medium' },
+    };
+  }
 
   function notify(status, detail = '') {
     try { window.parent?.postMessage({ type: 'agy-glass-player-status', mediaKey, kind, status, detail }, '*'); } catch {}
@@ -66,7 +95,23 @@
     try { instance.setFit(mapFit(state.fit)); } catch {}
     try { instance.setVolume(Math.max(0, Math.min(1, (state.volume || 0) / 100))); } catch {}
     try { if (instance.editor?.setTimeScale) instance.editor.setTimeScale(state.playbackRate || 1); } catch {}
-    if (state.properties && Object.keys(state.properties).length) {
+    if (state.fpsLimit !== lastFps) {
+      lastFps = state.fpsLimit;
+      try { if (typeof instance.setFps === 'function') instance.setFps(state.fpsLimit); } catch {}
+    }
+    if (state.performanceMode !== lastPerfMode) {
+      lastPerfMode = state.performanceMode;
+      const prof = perfProfile(state.performanceMode);
+      try { if (typeof instance.setQuality === 'function') instance.setQuality(prof.quality); } catch {}
+      try { if (typeof instance.setVideoTexScale === 'function') instance.setVideoTexScale(prof.videoTexScale); } catch {}
+      if (Math.abs(prof.renderDpr - appliedRenderDpr) > 0.01) {
+        appliedRenderDpr = prof.renderDpr;
+        try { if (typeof instance.setRenderDpr === 'function') instance.setRenderDpr(prof.renderDpr); } catch {}
+      }
+    }
+    const propsJson = state.properties && Object.keys(state.properties).length ? JSON.stringify(state.properties) : '';
+    if (propsJson && propsJson !== lastPropsJson) {
+      lastPropsJson = propsJson;
       try { instance.setProperties(state.properties); } catch {}
     }
     syncPauseState();
@@ -106,17 +151,25 @@
       const baseUrl = `${location.origin}/scene/${encodeURIComponent(mediaKey)}`;
       const source = api.httpSource(baseUrl);
       const shouldPause = Boolean(state.paused || reducedMotion.matches || (state.pauseWhenHidden && (document.hidden || hostHidden)));
+      const prof = perfProfile(state.performanceMode);
+      appliedRenderDpr = prof.renderDpr;
+      lastPerfMode = state.performanceMode;
+      lastFps = state.fpsLimit;
+      lastPropsJson = state.properties && Object.keys(state.properties).length ? JSON.stringify(state.properties) : '';
       const mounted = await api.mount(stage, {
         source,
         fit: mapFit(state.fit),
-        fps: 60,
+        fps: state.fpsLimit,
+        renderDpr: prof.renderDpr,
+        videoTexScale: prof.videoTexScale,
+        quality: prof.quality,
         volume: Math.max(0, Math.min(1, (state.volume || 0) / 100)),
         autoplay: !shouldPause,
         properties: state.properties || {},
         scripts: true,
         webSandbox: 'strict',
         localAssets: 'off',
-        autoQuality: true,
+        autoQuality: state.performanceMode !== 'ultra',
         mountTimeoutMs: 45000,
         onReady(info) { notify('ready', info ? `${info.width}x${info.height}` : ''); },
         onError(err) { showFallback(err?.message || '壁纸渲染失败'); },
@@ -150,6 +203,8 @@
       if (typeof p.zoom === 'number') state.zoom = p.zoom;
       if (typeof p.flipX === 'boolean') state.flipX = p.flipX;
       if (typeof p.pointerParallax === 'boolean') state.pointerParallax = p.pointerParallax;
+      if (['eco', 'balanced', 'ultra'].includes(p.performanceMode)) state.performanceMode = p.performanceMode;
+      if ([30, 45, 60].includes(p.fpsLimit)) state.fpsLimit = p.fpsLimit;
       if (typeof p.hidden === 'boolean') hostHidden = p.hidden;
       if (p.properties && typeof p.properties === 'object') state.properties = p.properties;
       applyRuntimeControls();

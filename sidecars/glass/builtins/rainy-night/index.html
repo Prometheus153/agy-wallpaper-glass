@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Rainy Night</title>
@@ -8,49 +8,65 @@
 <body>
 <canvas id="c"></canvas>
 <script>
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
-const orbs = Array.from({ length: 24 }, (_, i) => ({
-  x: Math.random(), y: 0.15 + Math.random() * 0.7, r: 0.05 + Math.random() * 0.11,
-  col: ['rgba(56,189,248,0.22)', 'rgba(244,114,182,0.2)', 'rgba(251,191,36,0.16)', 'rgba(167,139,250,0.2)'][i % 4],
-  p: i * 1.1,
-}));
-const drops = Array.from({ length: 180 }, () => ({ x: Math.random(), y: Math.random(), len: 14 + Math.random() * 24, v: 0.008 + Math.random() * 0.012, a: 0.12 + Math.random() * 0.24 }));
-function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
+const c = document.getElementById('c'), ctx = c.getContext('2d', { alpha: false });
+let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1, bgGrad = null, last = 0, raf = 0;
+function makeOrb(col) {
+  const o = document.createElement('canvas'); o.width = o.height = 96;
+  const g = o.getContext('2d');
+  const gr = g.createRadialGradient(48, 48, 5, 48, 48, 48);
+  gr.addColorStop(0, col); gr.addColorStop(0.75, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 96, 96);
+  return o;
+}
+const orbSprites = [
+  makeOrb('rgba(56,189,248,0.22)'), makeOrb('rgba(244,114,182,0.2)'),
+  makeOrb('rgba(251,191,36,0.16)'), makeOrb('rgba(167,139,250,0.2)'),
+];
+const orbs = Array.from({ length: 22 }, (_, i) => ({ x: Math.random(), y: 0.15 + Math.random() * 0.7, r: 0.05 + Math.random() * 0.11, si: i % 4, p: i * 1.1 }));
+const drops = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random(), len: 14 + Math.random() * 24, v: 0.008 + Math.random() * 0.012, a: 0.12 + Math.random() * 0.24 }));
+function resize() {
+  const dpr = Math.min(1.25, devicePixelRatio || 1);
+  w = c.width = Math.max(1, Math.round(innerWidth * dpr));
+  h = c.height = Math.max(1, Math.round(innerHeight * dpr));
+  bgGrad = ctx.createLinearGradient(0, 0, w, h);
+  bgGrad.addColorStop(0, '#0c1020'); bgGrad.addColorStop(0.55, '#171a30'); bgGrad.addColorStop(1, '#0e1b2c');
+}
 addEventListener('resize', resize); resize();
-addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); }, { passive: true });
 window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
-function frame() {
-  t += 0.01 * speed;
-  const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, '#0c1020'); bg.addColorStop(0.55, '#171a30'); bg.addColorStop(1, '#0e1b2c');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+function frame(now) {
+  if (document.hidden) { raf = 0; return; }
+  raf = requestAnimationFrame(frame);
+  if (last && now - last < 31) return;
+  const dt = last ? Math.min(0.06, (now - last) / 1000) : 0.033;
+  last = now;
+  const step = dt * 60;
+  t += 0.01 * step * speed;
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+  const m = Math.min(w, h);
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   for (const o of orbs) {
     const cx = o.x * w + Math.sin(t * 0.4 + o.p) * 20 + (mx - 0.5) * 34;
     const cy = o.y * h + Math.cos(t * 0.35 + o.p) * 14 + (my - 0.5) * 20;
-    const r = o.r * Math.min(w, h);
-    const rg = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
-    rg.addColorStop(0, o.col); rg.addColorStop(0.75, o.col); rg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.283); ctx.fill();
+    const r = o.r * m;
+    ctx.drawImage(orbSprites[o.si], cx - r, cy - r, r * 2, r * 2);
   }
   ctx.restore();
   const count = Math.min(drops.length, Math.round(95 * density));
   const wind = -0.14 + (mx - 0.5) * 0.18;
-  ctx.lineCap = 'round';
+  ctx.lineCap = 'round'; ctx.lineWidth = 1.1;
   for (let i = 0; i < count; i++) {
     const d = drops[i];
-    d.y += d.v * speed; d.x += d.v * wind * speed;
+    d.y += d.v * step * speed; d.x += d.v * wind * step * speed;
     if (d.y > 1.05) { d.y = -0.05; d.x = Math.random(); }
     if (d.x < -0.05) d.x += 1.1; if (d.x > 1.05) d.x -= 1.1;
     const x = d.x * w, y = d.y * h;
     ctx.strokeStyle = `rgba(210,234,255,${d.a.toFixed(2)})`;
-    ctx.lineWidth = 1.1; ctx.beginPath();
-    ctx.moveTo(x, y); ctx.lineTo(x + d.len * wind, y + d.len); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + d.len * wind, y + d.len); ctx.stroke();
   }
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(frame); } });
+raf = requestAnimationFrame(frame);
 </script>
 </body>
 </html>

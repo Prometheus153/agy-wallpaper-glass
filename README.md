@@ -1,123 +1,117 @@
-# AGY Glass v1.0.0
+# AGY Wallpaper Glass (`agy-wallpaper-glass`) v1.1.0
 
-为 **Antigravity Desktop** 打造的 **Wallpaper Engine 壁纸库与 iOS 液态玻璃（Liquid Glass）** 美化插件。
+<p align="center">
+  <strong>English</strong> | <a href="./README.zh-CN.md">简体中文</a>
+</p>
 
-灵感参考 `dsh-plugin-wallpaper-engine v1.4.0`，并离线内置 MIT 开源 **WebWallGL** 渲染核心：无需运行 Steam 小红车后台、无需外网 CDN，即可把本地 **场景（Scene）**、**网页（Web）**、**视频（Video）**、**图片（Image）** 壁纸实时渲染在 Antigravity 主界面背后，同时将侧边栏、输入框、设置弹窗与菜单升级为通透的液态玻璃材质。
+An **iOS-style Liquid Glass & Wallpaper Engine** customization plugin for **Antigravity Desktop** — featuring offline local Scene/Web/Video/Image wallpaper rendering, performance tuning, full English/Chinese UI, and an interactive animated catgirl desktop pet.
 
----
-
-## 核心特性
-
-- **全格式本地壁纸 + 6 套自带动态壁纸（内置离线 WebWallGL 引擎）**
-  - **开箱自带 6 套原创动态壁纸**：无需 Steam 小红车也能直接体验——**极光冰原（Aurora）**、**深空星尘（Stardust）**、**樱吹雪（Sakura）**、**深海潮汐（Deep Tide）**、**暮林萤火（Fireflies）**、**雨夜霓虹（Rainy Night）**，均支持鼠标视差与实时流速/粒子密度调节。
-  - **场景壁纸（Scene）**：支持 `scene.pkg` 打包与松散 `scene.json` 工程，实时 WebGL2 渲染粒子、骨骼动画、SceneScript 与鼠标视差交互；WebGL 不可用时平滑降级为静态预览帧不白屏。
-  - **网页壁纸（Web）**：严格沙箱隔离渲染，内置 Wallpaper Engine 属性通信。
-  - **视频 / 图片壁纸**：原文件免复制本机流式播放（支持 Range 拖动与大视频）。
-  - **灵活导入**：自动发现本机 Steam 创意工坊（`431960`）与 Wallpaper Engine 目录；支持一键**导入本地场景/网页文件夹**（Windows 原生文件夹选择框或手动路径），也支持直接**导入独立 `.pkg` 场景包**（最大 256 MB）及单文件图片/视频。
-- **互动猫娘桌宠与快捷液态玻璃浮窗**
-  - 紧贴聊天区右边界的动态小猫娘：60fps 原画纹理网格实时物理摇尾（上摆自然大弧度下垂、到顶下摆勾出饱满上翘 J 弯，转折过渡柔顺 S 曲线）、静谧定时单次 Wink 眨眼（鼠标碰触不误触发）、轻呼吸微动与悬停探头互动。
-  - **智能联动**：打开右侧审阅 / 文件 / 终端 / 分屏时，桌宠自动同步向左移动贴合聊天区右边框；支持上下拖动调整并记住高度。
-  - **一点即开**：单击桌宠直接在身旁丝滑弹出独立的液态玻璃控制浮窗（再点收起）；右键呼出迷你快捷菜单（暂停壁纸 / 切换主题 / 暂时隐藏桌宠），也可在「样式」页随时开关和调节桌宠大小。
-- **极简液态玻璃控制面板（实时所见即所得）**
-  - 顶部常驻轻量总开关与当前壁纸状态卡（圆形封面 + 实时状态 + 暂停 / 刷新 / 清除）。
-  - 精简的 **壁纸 / 样式** 两页设计：默认直接展示壁纸库点选切换；「样式」页前置 3 套鲜明氛围主题（午夜蓝 / 薄雾白 / 暖余晖）与核心玻璃/播放滑块，色彩/缩放/倍速/字体等精调项优雅收纳在折叠区中。
-  - **分屏与审阅高可读性**：对话区全透展示壁纸，多栏分屏自动显示细腻的液态玻璃分隔线，审阅（Diff）、代码、终端与分屏新建页自动铺设高通透毛玻璃底衬，兼顾美感与清晰阅读。
-  - 动态场景自定义属性：自动解析 `project.json` 中的 `general.properties`，直接在面板热调场景参数。
-- **安全与无侵入**
-  - 不修改 Antigravity 安装目录文件，不读取聊天内容，不上传任何本地资源。
-  - 停用或关闭插件后界面立即自动恢复原生样式（异常退出约 15 秒租约到期自动清理）。
+Inspired by `dsh-plugin-wallpaper-engine v1.4.0` and powered by the bundled MIT-licensed **WebWallGL** engine: render local **Scene**, **Web**, **Video**, and **Image** wallpapers behind Antigravity Desktop with **no Steam/Wallpaper Engine background process** and **no external CDN**, while upgrading the sidebar, composer, split panes, diff review views, and dialogs into translucent Liquid Glass surfaces.
 
 ---
 
-## 前置要求
+## Highlights
 
-1. **Node.js `>= 22.12.0`**（可从 [nodejs.org](https://nodejs.org/) 下载，安装插件**无需执行 `npm install`**）
-2. **Antigravity Desktop**（桌面客户端，非 VS Code IDE 扩展）
-3. **开启 Antigravity 本机 DevTools 调试端口**（插件通过本机回环调试端口无侵入注入壁纸与玻璃样式）：
-   - **Windows 设置方式**：右键桌面/开始菜单中的 Antigravity 快捷方式 → **属性** → 在「目标（Target）」末尾加一个空格和 `--remote-debugging-port=9222`（例如 `"...Antigravity.exe" --remote-debugging-port=9222`）→ 保存后重新启动 Antigravity 即可（确认 `%APPDATA%\Antigravity\DevToolsActivePort` 已生成）。
-   - **安全提醒**：仅限本机回环地址（`127.0.0.1`），切勿向局域网或公网暴露调试端口。
+- **All Wallpaper Formats + 6 Built-in Animated Wallpapers (Offline WebWallGL Bundled)**
+  - **6 Original Built-in Wallpapers Ready Out of the Box**: *Aurora*, *Stardust*, *Sakura*, *Deep Tide*, *Fireflies*, and *Rainy Night* — works even without Wallpaper Engine, with mouse parallax, live speed/density controls, and low-CPU sprite/gradient caching.
+  - **Scene Wallpapers**: Supports both packed `scene.pkg` and loose `scene.json` projects via WebGL2 (particles, skeletal animation, SceneScript, mouse parallax), with automatic fallback to static preview frames if WebGL2 is unavailable.
+  - **Web / Video / Image Wallpapers**: Sandboxed Web wallpapers with Wallpaper Engine property messaging, plus zero-copy local streaming with HTTP Range support for large videos.
+- **Smooth Performance Controls (`v1.1.0`)**
+  - Built-in **Performance Mode** (**Eco / Balanced / Ultra**, default *Balanced*) and **FPS Cap** (**30 / 45 / 60 FPS**, default *30 FPS*) hot-applied directly to WebWallGL (`setFps`, `setQuality`, `setRenderDpr`, `setVideoTexScale`).
+  - Eliminates idle full-screen CSS filter passes and excessive `backdrop-filter` readbacks on scrolling code blocks, plus debounced DOM observers and automatic pause when hidden.
+- **Interactive Catgirl Desktop Pet & Floating Glass Drawer**
+  - Clings to the right border of the chat pane with 60fps hand-painted tail mesh physics, calm periodic winks, tight click-through body hit testing, and automatic hiding beneath Settings/modal dialogs.
+  - Automatically shifts left when right-side panes (Review, Files, Terminal, Split View) open; drag vertically to adjust & save height; click to toggle a sleek floating Liquid Glass drawer; right-click for quick actions.
+- **Bilingual UI (`EN / 中文`) & 3 Distinct Glass Themes**
+  - Auto-detects system language with a one-click **`EN / 中文`** toggle in the panel header.
+  - Streamlined **Wallpapers / Style** tabs with 3 themes (**Midnight**, **Frost**, **Ember**), split-pane glass dividers, high-contrast frosted backing for Diff/Review/Terminal panes, and dynamic `project.json` Scene properties.
+- **Non-Invasive & Safe**
+  - Never modifies Antigravity binaries, never reads chat content, and never uploads local files. Disabling restores native UI immediately (and cleans up automatically on a 15s lease if terminated unexpectedly).
 
 ---
 
-## 快速安装（开箱即用，免 `npm install`）
+## Requirements
 
-仓库已内置离线 MIT 开源 WebWallGL 引擎（`sidecars/glass/vendor/webwallgl.global.min.js`）、6 套原创动态壁纸与猫娘桌宠素材，**无需安装任何 npm 依赖**，也不包含任何作者个人路径。
+1. **Node.js `>= 22.12.0`** ([nodejs.org](https://nodejs.org/)) — **no `npm install` needed** to install or run the plugin.
+2. **Antigravity Desktop** (desktop app, not the VS Code extension).
+3. **Local DevTools Debugging Port Enabled** (loopback `127.0.0.1` only):
+   - **Windows**: Right-click your Antigravity shortcut → **Properties** → append a space and `--remote-debugging-port=9222` to **Target** (e.g. `"...Antigravity.exe" --remote-debugging-port=9222`) → save and restart Antigravity (confirm `%APPDATA%\Antigravity\DevToolsActivePort` exists).
+   - **Security note**: Keep the debugging port strictly on `127.0.0.1`; never expose it to LAN or the public internet.
 
-### 方式一：Windows 一键安装（推荐）
-1. 在本仓库页面点击 **Code → Download ZIP**（或前往 [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) 下载 `agy-glass-v1.0.0.zip`）并解压到任意目录。
-2. 双击文件夹里的 **`install.bat`**：
-   - 输入 `1`：首次安装到 `~/.gemini/config/plugins/agy-glass`
-   - 输入 `2`：覆盖更新（自动备份旧版并保留原有壁纸和设置）
-   - 输入 `3`：卸载（保留备份与个人数据）
-   - 输入 `4`：在浏览器启动本地实时预览，提前体验 UI、壁纸与桌宠（不修改真实 Antigravity）
+---
 
-### 方式二：命令行安装（`git clone` / 跨平台）
+## Quick Install (Zero `npm install`)
+
+The repository and release ZIP already bundle the offline MIT WebWallGL engine (`sidecars/glass/vendor/webwallgl.global.min.js`), 6 built-in animated wallpapers, and desktop pet assets with zero hardcoded user paths.
+
+### Option 1: Windows One-Click Installer (Recommended)
+1. Download `agy-wallpaper-glass-v1.1.0.zip` from [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) (or click **Code → Download ZIP**) and extract it.
+2. Double-click **`install.bat`**:
+   - `1`: First-time install to `~/.gemini/config/plugins/agy-wallpaper-glass`
+   - `2`: Update / migrate from legacy `agy-glass` (automatically backs up the old plugin and preserves all user settings & imported wallpapers)
+   - `3`: Uninstall (keeps backup & user data)
+   - `4`: Launch browser live preview without touching Antigravity
+
+### Option 2: Command Line (`git clone` / Cross-Platform)
 ```bash
 git clone https://github.com/Prometheus153/agy-wallpaper-glass.git
 cd agy-wallpaper-glass
 
-# 首次安装（无需 npm install）
+# First-time install (no npm install required)
 node scripts/install.mjs
 
-# 从旧版本更新（自动备份）
+# Update or migrate from legacy agy-glass (keeps backup & user data)
 node scripts/install.mjs --update
 
-# 卸载
+# Uninstall
 node scripts/install.mjs --uninstall
 
-# 浏览器实时预览（用于调试或体验）
+# Launch local browser preview
 node sidecars/glass/server.mjs --preview
 ```
 
-### 安装后如何启用
-1. 重启或打开 Antigravity Desktop，进入 **自定义（Customizations） → 已安装（Installed） → AGY Glass**。
-2. 开启 **AGY Glass** 插件，点击聊天区右侧小猫娘桌宠（或侧边栏 **「AGY Glass · 壁纸库」** 视图）打开控制面板。
-3. 开启顶部总开关，在默认 **「壁纸」** 页即可看到 6 套自带动态壁纸与自动扫描出的本机 Steam / Wallpaper Engine 全部壁纸，点击任意卡片即可立即应用！
+### Enable in Antigravity Desktop
+1. Open Antigravity Desktop → **Customizations → Installed → AGY Wallpaper Glass**.
+2. Enable the plugin, then open the **AGY Wallpaper Glass** side pane (or click the catgirl pet on the right edge of chat).
+3. Toggle the master switch ON and click any built-in or local Wallpaper Engine card to apply it live!
 
 ---
 
-## 读取本机 Wallpaper Engine 壁纸需要做什么？
+## Using Your Own Wallpaper Engine Library
 
-- **标准 Steam 版 Wallpaper Engine 用户：通常零配置，全自动读取！**
-  - **无需运行 Steam 或 Wallpaper Engine 后台**（小红车完全退出也能渲染场景/网页/视频/图片壁纸）。
-  - 插件启动时会自动检测 Windows 注册表中的 Steam 与 Wallpaper Engine 路径、解析所有盘符的 `steamapps/libraryfolders.vdf` 与 `config/libraryfolders.vdf`、扫描常见盘符下的 `Steam` / `SteamLibrary` 目录（以及 macOS / Linux 默认 Steam 路径），自动列出你本机已订阅的创意工坊（`431960`）与内置壁纸。
-- **绿色版 / 自定义路径 / 独立壁纸包用户（3 种手动导入方式）**：
-  1. **导入场景 / 网页目录**：在「壁纸」页点击 **「导入场景 / 网页目录」**，选择包含 `project.json` 的单个壁纸文件夹或存放多个壁纸的总目录，立即加入库并免复制流式渲染。
-  2. **直接导入 `.pkg` / 视频 / 图片**：点击 **「导入文件 / .pkg」** 选择任意 `scene.pkg`（最大 256 MB）或单个视频/图片文件，插件自动封装并实时渲染。
-  3. **自定义长期扫描目录**：展开 **「扫描目录与 Steam 库配置」**，每行填入一个 Steam 根目录、Wallpaper Engine 安装目录或自定义壁纸总目录保存（也支持设置环境变量 `AGY_GLASS_STEAM_ROOT`）。
-- **没有安装 Wallpaper Engine 的用户**：同样可以直接开箱使用内置的 **6 套原创动态壁纸**，或者导入自己的本地 MP4 / WebM / 图片。
-
----
-
-## 常见问题排查
-
-- **顶部状态显示「等待连接」？**
-  请确认 Antigravity Desktop 已开启本机 DevTools 调试端口（生成 `%APPDATA%\Antigravity\DevToolsActivePort`），且插件是从 Antigravity 插件系统启动的。开启端口请仅限本机回环地址，不要暴露到局域网或公网。
-- **某些极复杂的场景壁纸无法 WebGL 渲染？**
-  WebWallGL 支持绝大多数 2D/3D 场景、粒子、木偶骨骼与 SceneScript；若个别壁纸使用特殊未支持特性或设备 WebGL2 受限，播放器会自动平滑回退显示壁纸自带的预览图，不会导致界面黑屏。
-- **如何彻底恢复原生界面？**
-  点击面板右上角「已开启」按钮关闭，或在「样式」页点击「恢复原界面」，或在 Antigravity 插件页停用 AGY Glass 即可瞬间还原。
+- **Standard Steam Wallpaper Engine Users — Zero Setup**:
+  - **Steam and Wallpaper Engine do NOT need to be running.**
+  - On startup, the plugin automatically checks Windows Steam & Wallpaper Engine registry keys, parses both `steamapps/libraryfolders.vdf` and `config/libraryfolders.vdf`, scans common `Steam` / `SteamLibrary` drives (`C:\`–`Z:\`), and checks default macOS/Linux Steam paths to discover your Workshop (`431960`) and default wallpapers.
+- **Portable / Custom Locations (3 Easy Options)**:
+  1. **Import Folder**: Click **Import Folder** in the *Wallpapers* tab to add a single `project.json` folder or a parent directory of wallpapers (zero-copy streaming).
+  2. **Import File / `.pkg`**: Click **Import File / .pkg** to import any standalone `scene.pkg` (up to 256 MB) or single image/video file.
+  3. **Custom Scan Roots**: Expand **Library Paths & Steam Discovery** to save up to 12 custom directories (or set `AGY_GLASS_STEAM_ROOT`).
+- **No Wallpaper Engine Installed?**: Enjoy the **6 built-in animated wallpapers** or import any local MP4/WebM/PNG/JPG/WebP/GIF directly.
 
 ---
 
-## 开发者说明
+## Troubleshooting
+
+- **Status stuck on `Waiting`?**
+  Verify Antigravity Desktop was launched with `--remote-debugging-port=9222` (creating `%APPDATA%\Antigravity\DevToolsActivePort`) and the plugin was started from Antigravity's plugin manager.
+- **Dynamic wallpaper feels heavy on laptops / HiDPI displays?**
+  Open the **Style** tab → **Performance & Smoothness** and keep **Quality** on **Balanced** or **Eco** with **30 FPS**.
+- **How to restore the native UI instantly?**
+  Turn off the top-right master switch, click **Restore Native UI** in the *Style* tab, or disable **AGY Wallpaper Glass** in Antigravity Customizations.
+
+---
+
+## Development
 
 ```bash
-# 运行全部自动化单元测试
-npm test
-
-# 启动浏览器本地实时预览（默认 http://127.0.0.1:47831）
-npm run preview
-
-# 从 node_modules 重新同步离线 WebWallGL 引擎文件
-npm run sync:vendor
-
-# 生成可直接分享给别人的离线发布压缩包（dist/agy-glass-v1.0.0.zip）
-npm run pack:release
+npm test            # Run full automated test suite
+npm run preview     # Start live browser preview (http://127.0.0.1:47831)
+npm run sync:vendor # Refresh offline WebWallGL bundle from node_modules
+npm run pack:release # Build offline dist/agy-wallpaper-glass-v1.1.0.zip
 ```
 
-## 开源许可与致谢
+## License & Credits
 
-- 本项目遵循 [MIT License](./LICENSE)。
-- 内置离线场景渲染核心 **[WebWallGL](https://github.com/oneincase/webwallgl)** 采用 MIT 许可（完整许可文本见 `sidecars/glass/vendor/webwallgl.LICENSE`）。
-- 产品交互思路致敬社区项目 `dsh-plugin-wallpaper-engine`。与 Google、Antigravity、DSH 及 Wallpaper Engine 官方无隶属关系。
+- Released under the [MIT License](./LICENSE).
+- Bundled offline Scene engine **[WebWallGL](https://github.com/oneincase/webwallgl)** is licensed under MIT (`sidecars/glass/vendor/webwallgl.LICENSE`).
+- Conceptually inspired by `dsh-plugin-wallpaper-engine`. Not affiliated with Google, Antigravity, DSH, or Wallpaper Engine.

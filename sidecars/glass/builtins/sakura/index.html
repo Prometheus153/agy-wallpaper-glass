@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sakura</title>
@@ -8,45 +8,65 @@
 <body>
 <canvas id="c"></canvas>
 <script>
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
-const petals = Array.from({ length: 90 }, () => ({
+const c = document.getElementById('c'), ctx = c.getContext('2d', { alpha: false });
+let w = 0, h = 0, dpr = 1, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1, bgGrad = null, last = 0, raf = 0;
+const petals = Array.from({ length: 84 }, () => ({
   x: Math.random(), y: Math.random(), s: 5 + Math.random() * 9,
   vx: 0.0005 + Math.random() * 0.0011, vy: 0.0006 + Math.random() * 0.0012,
   rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.04, p: Math.random() * 6.28,
 }));
-function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
+const sunSprite = (() => {
+  const o = document.createElement('canvas'); o.width = o.height = 128;
+  const g = o.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,250,245,0.68)'); gr.addColorStop(0.5, 'rgba(255,214,226,0.28)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return o;
+})();
+const petalGrad = (() => {
+  const g = ctx.createLinearGradient(-10, -10, 10, 10);
+  g.addColorStop(0, 'rgba(255,240,246,0.92)'); g.addColorStop(1, 'rgba(251,182,206,0.82)');
+  return g;
+})();
+function resize() {
+  dpr = Math.min(1.25, devicePixelRatio || 1);
+  w = c.width = Math.max(1, Math.round(innerWidth * dpr));
+  h = c.height = Math.max(1, Math.round(innerHeight * dpr));
+  bgGrad = ctx.createLinearGradient(0, 0, w * 0.3, h);
+  bgGrad.addColorStop(0, '#c8daf3'); bgGrad.addColorStop(0.5, '#ebd8e8'); bgGrad.addColorStop(1, '#f5d9df');
+}
 addEventListener('resize', resize); resize();
-addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); }, { passive: true });
 window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
 function drawPetal(x, y, s, rot, flip) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(1, 0.55 + 0.45 * Math.sin(flip));
-  const g = ctx.createLinearGradient(-s, -s, s, s);
-  g.addColorStop(0, 'rgba(255,240,246,0.92)'); g.addColorStop(1, 'rgba(251,182,206,0.78)');
-  ctx.fillStyle = g; ctx.beginPath();
+  ctx.fillStyle = petalGrad; ctx.beginPath();
   ctx.moveTo(0, -s); ctx.bezierCurveTo(s * 0.9, -s * 0.6, s * 0.85, s * 0.7, 0, s);
   ctx.bezierCurveTo(-s * 0.85, s * 0.7, -s * 0.9, -s * 0.6, 0, -s);
   ctx.fill(); ctx.restore();
 }
-function frame() {
-  t += 0.012 * speed;
-  const bg = ctx.createLinearGradient(0, 0, w * 0.3, h);
-  bg.addColorStop(0, '#c8daf3'); bg.addColorStop(0.5, '#ebd8e8'); bg.addColorStop(1, '#f5d9df');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-  const sun = ctx.createRadialGradient(w * (0.72 + (mx - 0.5) * 0.06), h * (0.24 + (my - 0.5) * 0.04), 0, w * 0.72, h * 0.24, Math.min(w, h) * 0.65);
-  sun.addColorStop(0, 'rgba(255,250,245,0.68)'); sun.addColorStop(0.5, 'rgba(255,214,226,0.28)'); sun.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = sun; ctx.fillRect(0, 0, w, h);
+function frame(now) {
+  if (document.hidden) { raf = 0; return; }
+  raf = requestAnimationFrame(frame);
+  if (last && now - last < 31) return;
+  const dt = last ? Math.min(0.06, (now - last) / 1000) : 0.033;
+  last = now;
+  const step = dt * 60;
+  t += 0.012 * step * speed;
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+  const sr = Math.min(w, h) * 0.65;
+  ctx.drawImage(sunSprite, w * (0.72 + (mx - 0.5) * 0.06) - sr, h * (0.24 + (my - 0.5) * 0.04) - sr, sr * 2, sr * 2);
   const count = Math.min(petals.length, Math.round(48 * density));
   for (let i = 0; i < count; i++) {
     const p = petals[i];
-    p.x = (p.x + (p.vx + (mx - 0.5) * 0.0012 + Math.sin(t + p.p) * 0.0004) * speed + 1) % 1;
-    p.y = (p.y + p.vy * speed) % 1;
-    p.rot += p.vr * speed;
-    drawPetal(p.x * w, p.y * h, p.s * Math.min(2, devicePixelRatio || 1), p.rot, t * 2 + p.p);
+    p.x = (p.x + (p.vx + (mx - 0.5) * 0.0012 + Math.sin(t + p.p) * 0.0004) * step * speed + 1) % 1;
+    p.y = (p.y + p.vy * step * speed) % 1;
+    p.rot += p.vr * step * speed;
+    drawPetal(p.x * w, p.y * h, p.s * dpr, p.rot, t * 2 + p.p);
   }
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(frame); } });
+raf = requestAnimationFrame(frame);
 </script>
 </body>
 </html>

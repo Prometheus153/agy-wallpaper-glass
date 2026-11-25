@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stardust</title>
@@ -8,53 +8,68 @@
 <body>
 <canvas id="c"></canvas>
 <script>
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
-const stars = Array.from({ length: 240 }, () => ({ x: Math.random(), y: Math.random(), z: 0.25 + Math.random() * 0.9, r: 0.6 + Math.random() * 1.9, hue: 195 + Math.random() * 85, p: Math.random() * 6.28 }));
+const c = document.getElementById('c'), ctx = c.getContext('2d', { alpha: false });
+let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1, bgGrad = null, last = 0, raf = 0;
+const stars = Array.from({ length: 220 }, () => ({ x: Math.random(), y: Math.random(), z: 0.25 + Math.random() * 0.9, r: 0.6 + Math.random() * 1.8, hue: 195 + Math.random() * 85, p: Math.random() * 6.28 }));
 let meteor = { active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 };
-function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
-addEventListener('resize', resize); resize();
-addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
-window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
-function blob(cx, cy, rad, col) {
-  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-  g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(cx - rad, cy - rad, rad * 2, rad * 2);
+function makeGlow(col) {
+  const o = document.createElement('canvas'); o.width = o.height = 128;
+  const g = o.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return o;
 }
-function frame() {
-  t += 0.008 * speed;
-  const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, '#090b1a'); bg.addColorStop(0.5, '#131630'); bg.addColorStop(1, '#0b172a');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-  const px = (mx - 0.5) * 44, py = (my - 0.5) * 32;
-  blob(w * 0.28 + px + Math.sin(t * 0.5) * 35, h * 0.38 + py, Math.min(w, h) * 0.52, 'rgba(109,74,196,0.34)');
-  blob(w * 0.72 - px * 0.7 + Math.cos(t * 0.4) * 35, h * 0.62 - py * 0.7, Math.min(w, h) * 0.48, 'rgba(56,189,248,0.28)');
-  blob(w * 0.52 + Math.sin(t * 0.3) * 40, h * 0.22, Math.min(w, h) * 0.4, 'rgba(236,72,153,0.16)');
+const gPurple = makeGlow('rgba(109,74,196,0.34)');
+const gCyan = makeGlow('rgba(56,189,248,0.28)');
+const gPink = makeGlow('rgba(236,72,153,0.16)');
+function resize() {
+  const dpr = Math.min(1.25, devicePixelRatio || 1);
+  w = c.width = Math.max(1, Math.round(innerWidth * dpr));
+  h = c.height = Math.max(1, Math.round(innerHeight * dpr));
+  bgGrad = ctx.createLinearGradient(0, 0, w, h);
+  bgGrad.addColorStop(0, '#090b1a'); bgGrad.addColorStop(0.5, '#131630'); bgGrad.addColorStop(1, '#0b172a');
+}
+addEventListener('resize', resize); resize();
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); }, { passive: true });
+window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
+function frame(now) {
+  if (document.hidden) { raf = 0; return; }
+  raf = requestAnimationFrame(frame);
+  if (last && now - last < 31) return;
+  const dt = last ? Math.min(0.06, (now - last) / 1000) : 0.033;
+  last = now;
+  const step = dt * 60;
+  t += 0.008 * step * speed;
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+  const px = (mx - 0.5) * 44, py = (my - 0.5) * 32, m = Math.min(w, h);
+  const r1 = m * 0.52, r2 = m * 0.48, r3 = m * 0.4;
+  ctx.drawImage(gPurple, w * 0.28 + px + Math.sin(t * 0.5) * 35 - r1, h * 0.38 + py - r1, r1 * 2, r1 * 2);
+  ctx.drawImage(gCyan, w * 0.72 - px * 0.7 + Math.cos(t * 0.4) * 35 - r2, h * 0.62 - py * 0.7 - r2, r2 * 2, r2 * 2);
+  ctx.drawImage(gPink, w * 0.52 + Math.sin(t * 0.3) * 40 - r3, h * 0.22 - r3, r3 * 2, r3 * 2);
   const count = Math.min(stars.length, Math.round(135 * density));
   for (let i = 0; i < count; i++) {
     const s = stars[i];
-    s.y = (s.y - 0.00018 * s.z * speed + 1) % 1;
+    s.y = (s.y - 0.00018 * s.z * step * speed + 1) % 1;
     const x = (s.x * w + px * s.z + w) % w, y = (s.y * h + py * s.z + h) % h;
     const a = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * 2.6 + s.p));
     ctx.fillStyle = `hsla(${s.hue},85%,88%,${a.toFixed(2)})`;
     ctx.beginPath(); ctx.arc(x, y, s.r * s.z, 0, 6.283); ctx.fill();
   }
-  if (!meteor.active && Math.random() < 0.005 * speed) {
+  if (!meteor.active && Math.random() < 0.005 * step * speed) {
     meteor = { active: true, x: w * (0.3 + Math.random() * 0.6), y: h * (0.05 + Math.random() * 0.3), vx: -w * 0.014, vy: h * 0.008, life: 1 };
   }
   if (meteor.active) {
-    meteor.x += meteor.vx * speed; meteor.y += meteor.vy * speed; meteor.life -= 0.025 * speed;
+    meteor.x += meteor.vx * step * speed; meteor.y += meteor.vy * step * speed; meteor.life -= 0.025 * step * speed;
     if (meteor.life <= 0) meteor.active = false;
     else {
-      const mg = ctx.createLinearGradient(meteor.x, meteor.y, meteor.x - meteor.vx * 8, meteor.y - meteor.vy * 8);
-      mg.addColorStop(0, `rgba(224,242,254,${meteor.life.toFixed(2)})`); mg.addColorStop(1, 'rgba(224,242,254,0)');
-      ctx.strokeStyle = mg; ctx.lineWidth = 2.2; ctx.beginPath();
-      ctx.moveTo(meteor.x, meteor.y); ctx.lineTo(meteor.x - meteor.vx * 8, meteor.y - meteor.vy * 8); ctx.stroke();
+      ctx.strokeStyle = `rgba(224,242,254,${meteor.life.toFixed(2)})`; ctx.lineWidth = 2.2; ctx.beginPath();
+      ctx.moveTo(meteor.x, meteor.y); ctx.lineTo(meteor.x - meteor.vx * 7, meteor.y - meteor.vy * 7); ctx.stroke();
     }
   }
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(frame); } });
+raf = requestAnimationFrame(frame);
 </script>
 </body>
 </html>

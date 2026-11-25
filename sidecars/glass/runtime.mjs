@@ -101,6 +101,8 @@ export function installGlass(payload) {
         zoom: settings.zoom ?? 100,
         flipX: Boolean(settings.flipX),
         pointerParallax: settings.pointerParallax !== false,
+        performanceMode: settings.performanceMode || 'balanced',
+        fpsLimit: settings.fpsLimit || 30,
         hidden: Boolean(document.hidden),
         properties: sceneProps || {},
       },
@@ -136,9 +138,9 @@ export function installGlass(payload) {
   }
 
   function onPointer(event) {
-    if (disposed || !settings?.pointerParallax || settings.paused || mediaElement?.tagName !== 'IFRAME') return;
+    if (disposed || document.hidden || !settings?.pointerParallax || settings.paused || mediaElement?.tagName !== 'IFRAME') return;
     const now = Date.now();
-    if (event.type === 'pointermove' && now - lastPointerSent < 24) return;
+    if (event.type === 'pointermove' && now - lastPointerSent < 33) return;
     lastPointerSent = now;
     const w = globalThis.innerWidth || 1;
     const h = globalThis.innerHeight || 1;
@@ -204,6 +206,8 @@ export function installGlass(payload) {
     const bright = settings.brightness ?? 100;
     const contr = settings.contrast ?? 100;
     const sat = settings.saturation ?? 100;
+    const hasWpFilter = wpBlur !== 0 || bright !== 100 || contr !== 100 || sat !== 100;
+    const wpFilterCss = hasWpFilter ? `filter: blur(${wpBlur}px) brightness(${bright}%) contrast(${contr}%) saturate(${sat}%);` : '';
     const wpAlpha = Math.max(0, Math.min(1, (100 - (settings.wallpaperTransparency ?? 0)) / 100));
     const fitCss = settings.fit === 'contain' ? 'contain' : settings.fit === 'stretch' ? 'fill' : settings.fit === 'center' ? 'none' : 'cover';
     const posX = settings.posX ?? 50;
@@ -211,7 +215,7 @@ export function installGlass(payload) {
     const zoomScale = (settings.zoom ?? 100) / 100;
     const scaleX = settings.flipX ? -zoomScale : zoomScale;
     const portSel = Number.isInteger(next.sidecarPort) && next.sidecarPort > 0 ? `, iframe[src*="127.0.0.1:${next.sidecarPort}/"]` : '';
-    const agyFrame = `:is(iframe[src*="agy-glass"], iframe[title*="AGY Glass"], webview[src*="agy-glass"]${portSel})`;
+    const agyFrame = `:is(iframe[src*="agy-wallpaper-glass"], iframe[src*="agy-glass"], iframe[title*="AGY Wallpaper Glass"], iframe[title*="AGY Glass"], webview[src*="agy-wallpaper-glass"], webview[src*="agy-glass"]${portSel})`;
     const frostOverrides = isLight ? `
 ${scope} .bg-sidebar :is([aria-current="page"],[data-active="true"],[data-selected="true"],[data-state="open"],[class*="bg-accent"],[class*="bg-sidebar-accent"],[class*="bg-zinc-"],[class*="bg-neutral-"],[class*="bg-slate-9"],[class*="bg-gray-9"],[class*="bg-[#0"],[class*="bg-[#1"],[class*="bg-[#2"]) { background: rgba(255,255,255,0.78) !important; color: #0f172a !important; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 6px rgba(15,23,42,0.08) !important; }
 ${scope} .bg-sidebar :is([aria-current="page"],[data-active="true"],[data-selected="true"]) * { color: #0f172a !important; }
@@ -226,8 +230,8 @@ ${scope} [data-testid="agent-input-box"] button:not([class*="rounded-full"]):not
 ${scope} { color-scheme: ${isLight ? 'light' : 'dark'}; --background: transparent !important; --shell: transparent !important; --shell-canvas: transparent !important; --sidebar: ${glass} !important; --sidebar-secondary: ${glassSoft} !important; --sidebar-muted: ${glassSoft} !important; --sidebar-foreground: ${p.text} !important; --sidebar-accent: ${isLight ? 'rgba(255,255,255,0.76)' : 'rgba(255,255,255,0.12)'} !important; --sidebar-accent-foreground: ${p.text} !important; --card: ${glass} !important; --card-foreground: ${p.text} !important; --card-border: ${line} !important; --popover: ${dialogBg} !important; --popover-foreground: ${p.text} !important; --input: ${isLight ? 'rgba(255,255,255,0.78)' : glassSoft} !important; --accent: ${isLight ? 'rgba(255,255,255,0.74)' : 'rgba(255,255,255,0.12)'} !important; --accent-foreground: ${p.text} !important; --glass: ${glass} !important; --glass-border: ${line} !important; --glass-highlight: ${specularTop} !important; --secondary: ${glassSoft} !important; --muted: ${glassSoft} !important; --border: ${line} !important; --foreground: ${p.text} !important; --secondary-foreground: ${p.secondary} !important; --muted-foreground: ${p.muted} !important; --placeholder: ${p.muted} !important; --link: ${p.accent} !important; }
 ${scope} body { isolation: isolate; background: transparent !important; color: ${p.text}; }
 ${scope} #root { background: transparent !important; }
-${scope} #agy-glass-wallpaper { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: ${p.background}; }
-${scope} .agy-glass-backdrop { position: absolute; inset: -${wpBlur * 2}px; filter: blur(${wpBlur}px) brightness(${bright}%) contrast(${contr}%) saturate(${sat}%); opacity: ${wpAlpha}; transition: opacity .2s ease; }
+${scope} #agy-glass-wallpaper { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict; transform: translateZ(0); background: ${p.background}; }
+${scope} .agy-glass-backdrop { position: absolute; inset: -${wpBlur * 2}px; ${wpFilterCss} opacity: ${wpAlpha}; transition: opacity .2s ease; }
 ${scope} .agy-glass-backdrop > :is(img,video) { width: 100%; height: 100%; object-fit: ${fitCss}; object-position: ${posX}% ${posY}%; transform: scale(${scaleX}, ${zoomScale}); transform-origin: center center; pointer-events: none; display: block; }
 ${scope} .agy-glass-backdrop > iframe.agy-glass-player-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; display: block; background: transparent; }
 ${scope} .agy-glass-scrim { position: absolute; inset: 0; background: rgb(${p.scrimRgb} / ${scrimAlpha}); }
@@ -258,7 +262,7 @@ ${scope} div:not(#agy-glass-wallpaper):not(:has([data-testid="conversation-view"
 ${scope}:has([data-pane-id]:not(:has([data-testid="conversation-view"])):has(${agyFrame})) :is([data-pane-id],[data-panel]):has([data-testid="conversation-view"]):not(:has(${agyFrame})) { flex: 1 1 0% !important; max-width: none !important; }
 ${scope} [data-testid="conversation-view"] { text-shadow: ${textShadow}; }
 ${scope} [data-testid="conversation-view"] :is(pre,code,button,input,textarea,[contenteditable="true"]) { text-shadow: none; }
-${scope} [data-testid="conversation-view"] pre { background: rgb(${p.rgb} / ${Math.min(0.88, opEff + 0.16).toFixed(2)}) !important; backdrop-filter: blur(${Math.min(20, blurPx)}px); border: 1px solid ${line}; border-radius: ${Math.max(8, Math.round(radiusPx * 0.65))}px; }
+${scope} [data-testid="conversation-view"] pre { background: rgb(${p.rgb} / ${Math.min(0.9, opEff + 0.22).toFixed(2)}) !important; border: 1px solid ${line}; border-radius: ${Math.max(8, Math.round(radiusPx * 0.65))}px; }
 ${scope} :is([data-testid="pane-titlebar-toolbar"],[data-testid="toggle-overview-panel"],[data-testid="toggle-aux-sidebar"]) { background: ${readable} !important; backdrop-filter: blur(${Math.min(18, blurPx)}px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(${Math.min(18, blurPx)}px) saturate(${glassSat}%); border: 1px solid ${line}; border-radius: 10px; box-shadow: ${specularInner}; }
 ${scope} :is([data-testid="pane-titlebar-toolbar"] button,[data-testid="toggle-overview-panel"],[data-testid="toggle-aux-sidebar"]) { color: ${p.text} !important; }
 ${scope} :is([data-testid="pane-titlebar-toolbar"] button,[data-testid="toggle-overview-panel"],[data-testid="toggle-aux-sidebar"]):is(:hover,:focus-visible) { background: ${solid} !important; }
@@ -280,7 +284,7 @@ ${scope} #agy-glass-drawer-host[data-open="false"] { opacity: 0; pointer-events:
 ${scope} #agy-glass-drawer-host[data-open="true"] { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
 ${scope} #agy-glass-drawer-host.obscured { z-index: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 ${scope} #agy-glass-drawer-frame { width: 100%; height: 100%; border: 0; display: block; background: transparent; }
-${scope} #agy-glass-drawer-close { position: absolute; top: 9px; right: 58px; z-index: 5; width: 24px; height: 24px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: rgba(16,20,30,0.52); color: #eef5fb; font-size: 14px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
+${scope} #agy-glass-drawer-close { position: absolute; top: 11px; right: 10px; z-index: 5; width: 24px; height: 24px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: rgba(16,20,30,0.52); color: #eef5fb; font-size: 14px; line-height: 1; display: grid; place-items: center; cursor: pointer; }
 ${scope} #agy-glass-drawer-close:hover { background: rgba(255,255,255,0.2); }
 ${scope} #agy-glass-pet-menu { position: fixed; z-index: 28; min-width: 152px; padding: 6px; border-radius: 12px; background: ${dialogBg}; backdrop-filter: blur(22px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(22px) saturate(${glassSat}%); border: 1px solid ${line}; box-shadow: ${specularInner}, 0 14px 36px rgba(0,0,0,0.38); display: flex; flex-direction: column; gap: 3px; }
 ${scope} #agy-glass-pet-menu[hidden] { display: none !important; }

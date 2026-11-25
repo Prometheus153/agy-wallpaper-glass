@@ -1,4 +1,5 @@
 import { DEFAULTS, MAX_MEDIA_BYTES, MAX_PKG_BYTES, validateSettings } from './config.mjs';
+import { localizeBuiltinTitle, localizePropLabel, localizeSource, resolveLanguage, tr } from './i18n.mjs';
 
 const $ = id => document.getElementById(id);
 const mode = document.documentElement.dataset.mode;
@@ -26,10 +27,34 @@ const SLIDERS = [
   ['petSize', v => `${v}px`],
 ];
 
-const TYPE_LABELS = { video: '视频', image: '图片', scene: '场景', web: '网页', application: '应用', unknown: '未知' };
 const THEME_CARETS = { midnight: '#7dd3fc', frost: '#2563eb', ember: '#f6ad7b' };
 
 let settings = { ...DEFAULTS };
+let lastStatus = { code: 'waiting', windows: 0 };
+let lastSources = [];
+const currentLang = () => resolveLanguage(settings.language);
+const L = (key, vars) => tr(currentLang(), key, vars);
+const typeLabel = kind => L({
+  video: 'typeVideo', image: 'typeImage', scene: 'typeScene', web: 'typeWeb', application: 'typeApplication',
+}[kind] || 'typeUnknown');
+
+function applyLanguage() {
+  const lang = currentLang();
+  document.documentElement.lang = lang;
+  document.title = L('pageTitle');
+  const langBtn = $('lang-toggle');
+  if (langBtn) langBtn.textContent = lang === 'en' ? '中文' : 'EN';
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = L(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = L(el.dataset.i18nTitle); });
+  if (lastSources.length) {
+    $('library-sources').textContent = lastSources.map(s => `${localizeSource(lang, s.source)}: ${s.path}`).join('\n');
+  } else if (libraryItems !== null) {
+    $('library-sources').textContent = L('sourceEmpty');
+  }
+  setStatus(lastStatus);
+  if (libraryItems !== null) setLibraryStatus(librarySummary());
+}
 let media = null;
 let sceneProperties = {};
 let loaded = false;
@@ -56,7 +81,7 @@ async function api(path, data = {}) {
   else if (token) headers['X-Sidecar-Token'] = token;
   const response = await fetch(`./api/${path}`, { method: 'POST', headers, body: JSON.stringify(data) });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || '请求失败');
+  if (!response.ok) throw new Error(result.error || L('errRequest'));
   return result;
 }
 
@@ -67,7 +92,7 @@ async function uploadPkg(file) {
   else if (token) headers['X-Sidecar-Token'] = token;
   const response = await fetch('./api/import-pkg', { method: 'POST', headers, body: file });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || '场景包导入失败');
+  if (!response.ok) throw new Error(result.error || L('errPkgImport'));
   return result;
 }
 
@@ -77,12 +102,14 @@ function setSaveState(text, error = false) {
 }
 
 function setStatus(value) {
+  lastStatus = value || { code: 'waiting', windows: 0 };
   const labels = {
-    disabled: '已停用', waiting: '等待连接', connected: `已连接 · ${value.windows || 1}`,
-    unsupported: '不兼容', error: '连接不可用', preview: '实时预览',
+    disabled: L('statusDisabled'), waiting: L('statusWaiting'),
+    connected: L('statusConnected', { n: lastStatus.windows || 1 }),
+    unsupported: L('statusUnsupported'), error: L('statusError'), preview: L('statusPreview'),
   };
-  $('connection').textContent = labels[value.code] || value.message || '等待连接';
-  $('status-dot').className = `status-dot ${value.code === 'connected' || value.code === 'preview' ? 'connected' : value.code === 'error' ? 'error' : ''}`;
+  $('connection').textContent = labels[lastStatus.code] || lastStatus.message || L('statusWaiting');
+  $('status-dot').className = `status-dot ${lastStatus.code === 'connected' || lastStatus.code === 'preview' ? 'connected' : lastStatus.code === 'error' ? 'error' : ''}`;
 }
 
 function updateSliderFill(el) {
@@ -128,11 +155,13 @@ function updateNowPlaying() {
     glyph.textContent = media?.kind === 'scene' ? '❖' : media?.kind === 'web' ? '◎' : media?.kind === 'video' ? '▶' : '✦';
     ambient.style.backgroundImage = '';
   }
-  $('media-name').textContent = media ? media.name : '内置氛围背景';
-  const kindLabel = media ? (TYPE_LABELS[media.kind] || '壁纸') : '液态玻璃';
-  const stateLabel = !settings.enabled ? '已停用' : !media ? '默认氛围' : settings.paused ? '已暂停' : media.kind === 'scene' ? '渲染中' : media.kind === 'web' ? '运行中' : media.kind === 'video' ? '播放中' : '显示中';
+  const lang = currentLang();
+  $('media-name').textContent = media ? localizeBuiltinTitle(lang, media.name) : L('defaultBg');
+  const kindLabel = media ? typeLabel(media.kind) : L('glassLabel');
+  const stateLabel = !settings.enabled ? L('stateDisabled') : !media ? L('stateAmbient') : settings.paused ? L('statePaused')
+    : media.kind === 'scene' ? L('stateRendering') : media.kind === 'web' ? L('stateRunning') : media.kind === 'video' ? L('statePlaying') : L('stateShowing');
   $('media-subtitle').textContent = `${kindLabel} · ${stateLabel}`;
-  $('btn-pause').textContent = settings.paused ? '继续' : '暂停';
+  $('btn-pause').textContent = settings.paused ? L('btnResume') : L('btnPause');
   $('btn-pause').disabled = !loaded || busy || !media || media.kind === 'image';
   $('btn-reload').disabled = !loaded || busy || !media;
   $('clear-media').disabled = !loaded || busy || !media;
@@ -145,6 +174,7 @@ function renderSceneProperties() {
   if (!specs.length || !librarySelection) { section.hidden = true; list.replaceChildren(); return; }
   section.hidden = false;
   list.replaceChildren();
+  const lang = currentLang();
   const overrides = sceneProperties[librarySelection] || {};
   const pushProp = (key, value) => {
     const next = { ...(sceneProperties[librarySelection] || {}), [key]: value };
@@ -155,15 +185,16 @@ function renderSceneProperties() {
       try {
         const res = await api('scene-properties', { id: librarySelection, properties: next });
         sceneProperties = res.sceneProperties;
-        setSaveState('场景属性已生效');
+        setSaveState(L('toastPropsSaved'));
       } catch (e) { setSaveState(e.message, true); }
     }, 140);
   };
   for (const spec of specs) {
     const cur = Object.hasOwn(overrides, spec.key) ? overrides[spec.key] : spec.value;
+    const specLabel = localizePropLabel(lang, spec.text);
     if (spec.type === 'bool') {
       const row = document.createElement('div'); row.className = 'switch-row';
-      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = spec.text;
+      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = specLabel;
       const sw = document.createElement('label'); sw.className = 'ios-switch';
       const input = document.createElement('input'); input.type = 'checkbox'; input.checked = Boolean(cur);
       input.addEventListener('change', () => pushProp(spec.key, input.checked));
@@ -171,7 +202,7 @@ function renderSceneProperties() {
       sw.append(input, track); row.append(label, sw); list.append(row);
     } else if (spec.type === 'slider') {
       const row = document.createElement('label'); row.className = 'prop-slider';
-      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = spec.text;
+      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = specLabel;
       const input = document.createElement('input'); input.type = 'range';
       input.min = String(spec.min); input.max = String(spec.max); input.step = String(spec.step); input.value = String(cur);
       updateSliderFill(input);
@@ -180,20 +211,20 @@ function renderSceneProperties() {
       row.append(label, input, out); list.append(row);
     } else if (spec.type === 'combo') {
       const row = document.createElement('div'); row.className = 'switch-row';
-      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = spec.text;
+      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = specLabel;
       const sel = document.createElement('select'); sel.className = 'glass-select'; sel.style.maxWidth = '145px';
       for (const opt of spec.options || []) { const o = document.createElement('option'); o.value = opt.value; o.textContent = opt.label; sel.append(o); }
       sel.value = String(cur); sel.addEventListener('change', () => pushProp(spec.key, sel.value));
       row.append(label, sel); list.append(row);
     } else if (spec.type === 'color') {
       const row = document.createElement('div'); row.className = 'color-row';
-      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = spec.text;
+      const label = document.createElement('span'); label.className = 'prop-label'; label.textContent = specLabel;
       const input = document.createElement('input'); input.type = 'color'; input.value = rgbFloatToHex(cur);
       input.addEventListener('input', () => pushProp(spec.key, hexToRgbFloat(input.value)));
       row.append(label, input); list.append(row);
     } else if (spec.type === 'textinput') {
       const row = document.createElement('label'); row.className = 'field-stack';
-      const label = document.createElement('span'); label.textContent = spec.text;
+      const label = document.createElement('span'); label.textContent = specLabel;
       const input = document.createElement('input'); input.type = 'text'; input.className = 'glass-input'; input.maxLength = 200; input.value = String(cur ?? '');
       input.addEventListener('input', () => pushProp(spec.key, input.value));
       row.append(label, input); list.append(row);
@@ -220,6 +251,8 @@ function renderControls() {
   $('disable').disabled = !loaded || busy || !settings.enabled;
 
   document.querySelectorAll('[data-theme]').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.theme === settings.theme)));
+  document.querySelectorAll('[data-perf]').forEach(btn => btn.classList.toggle('active', btn.dataset.perf === (settings.performanceMode || 'balanced')));
+  document.querySelectorAll('[data-fps]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.fps) === (settings.fpsLimit || 30)));
   document.querySelectorAll('[data-rate]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.rate) === settings.playbackRate));
   document.querySelectorAll('[data-fit]').forEach(btn => btn.classList.toggle('active', btn.dataset.fit === settings.fit));
 
@@ -236,13 +269,14 @@ function setLibraryStatus(text, error = false) {
 function librarySummary() {
   if (!libraryItems) return '';
   const total = libraryItems.length;
-  const available = libraryItems.filter(i => i.available).length;
+  const avail = libraryItems.filter(i => i.available).length;
   const scenes = libraryItems.filter(i => i.type === 'scene' && i.available).length;
   const videos = libraryItems.filter(i => i.type === 'video' && i.available).length;
-  return `共 ${total} 项 · 可用 ${available}（场景 ${scenes} · 视频 ${videos}）` + (libraryTruncated ? ' · 已达上限' : '');
+  return L('libSummary', { total, avail, scenes, videos }) + (libraryTruncated ? L('libTruncated') : '');
 }
 
 function renderLibrary() {
+  const lang = currentLang();
   const query = $('library-search').value.trim().toLocaleLowerCase();
   const matches = (libraryItems || []).filter(item =>
     item.title.toLocaleLowerCase().includes(query) &&
@@ -260,6 +294,7 @@ function renderLibrary() {
 
   for (const item of pageItems) {
     const hidden = hiddenIds.has(item.id);
+    const displayTitle = item.builtin ? localizeBuiltinTitle(lang, item.title) : item.title;
     const card = document.createElement('div');
     card.className = `wp-card${item.id === librarySelection ? ' selected' : ''}${item.available ? '' : ' disabled'}`;
 
@@ -268,7 +303,7 @@ function renderLibrary() {
     const vis = document.createElement('button');
     vis.type = 'button';
     vis.className = 'wp-mini-btn';
-    vis.title = hidden ? '恢复显示' : '隐藏壁纸';
+    vis.title = hidden ? L('cardShow') : L('cardHide');
     vis.textContent = hidden ? '↺' : '×';
     vis.addEventListener('click', e => {
       e.stopPropagation();
@@ -276,7 +311,7 @@ function renderLibrary() {
         const res = await api('library/hide', { id: item.id, hidden: !hidden });
         hiddenIds = new Set(res.hiddenIds);
         renderLibrary();
-        setLibraryStatus(`已${hidden ? '恢复' : '隐藏'}「${item.title}」`);
+        setLibraryStatus(L(hidden ? 'toastShown' : 'toastHidden', { title: displayTitle }));
       });
     });
     tools.append(vis);
@@ -286,7 +321,7 @@ function renderLibrary() {
     btn.className = 'wp-select-btn';
     btn.disabled = !item.available;
     btn.addEventListener('click', () => void runBusy(async () => {
-      setSaveState(`正在加载「${item.title}」…`);
+      setSaveState(L('toastLoading', { title: displayTitle }));
       const res = await api('library/select', { id: item.id });
       media = res.media;
       settings = res.settings;
@@ -295,14 +330,14 @@ function renderLibrary() {
       setStatus(res.status);
       renderControls();
       renderLibrary();
-      setSaveState(`已应用「${item.title}」`);
+      setSaveState(L('toastApplied', { title: displayTitle }));
     }));
 
     const thumb = document.createElement('div');
     thumb.className = 'wp-thumb';
     const placeholder = document.createElement('span');
     placeholder.className = 'wp-placeholder';
-    placeholder.textContent = TYPE_LABELS[item.type] || '壁纸';
+    placeholder.textContent = typeLabel(item.type);
     thumb.append(placeholder);
     if (item.hasPreview) {
       const img = document.createElement('img');
@@ -316,36 +351,37 @@ function renderLibrary() {
     }
     const badge = document.createElement('span');
     badge.className = `wp-badge ${item.builtin ? 'builtin' : item.type}`;
-    badge.textContent = item.builtin ? '内置动态' : (TYPE_LABELS[item.type] || '未知');
+    badge.textContent = item.builtin ? L('badgeBuiltin') : typeLabel(item.type);
     thumb.append(badge);
 
     const info = document.createElement('div');
     info.className = 'wp-info';
     const title = document.createElement('strong');
-    title.textContent = item.title;
+    title.textContent = displayTitle;
     const sub = document.createElement('small');
+    const srcLabel = localizeSource(lang, item.source || L('cardSourceFallback'));
     sub.textContent = item.available
-      ? `${item.source || '壁纸库'}${item.bytes != null ? ` · ${(item.bytes / 1024 / 1024).toFixed(1)} MB` : ''}`
-      : (item.reason || '不可用');
+      ? `${srcLabel}${item.bytes != null ? ` · ${(item.bytes / 1024 / 1024).toFixed(1)} MB` : ''}`
+      : (item.reason || L('cardUnavailable'));
     info.append(title, sub);
     btn.append(thumb, info);
     card.append(tools, btn);
     grid.append(card);
   }
 
-  $('library-page').textContent = `${matches.length} 项 · ${libraryPages ? libraryPage + 1 : 0} / ${libraryPages}`;
+  $('library-page').textContent = L('libPage', { total: matches.length, cur: libraryPages ? libraryPage + 1 : 0, pages: libraryPages });
   $('library-prev').disabled = !loaded || busy || libraryPage <= 0;
   $('library-next').disabled = !loaded || busy || libraryPage >= libraryPages - 1;
   $('library-empty').hidden = matches.length > 0;
   $('library-empty').textContent = libraryItems === null
-    ? '正在扫描本机壁纸库…'
+    ? L('emptyScanning')
     : query
-      ? '没有匹配的壁纸。'
+      ? L('emptySearch')
       : activeFilter === 'hidden'
-        ? '没有已隐藏的壁纸。'
+        ? L('emptyHidden')
         : !libraryItems.length
-          ? '未自动发现壁纸，可点击上方导入场景目录或本地文件。'
-          : '当前分类下暂无壁纸。';
+          ? L('emptyNone')
+          : L('emptyFilter');
 
   const gen = ++thumbnailGeneration;
   let nextIdx = 0;
@@ -368,18 +404,20 @@ function renderLibrary() {
 }
 
 async function scanLibrary() {
-  setLibraryStatus('正在扫描本机 Steam / Wallpaper Engine…');
+  setLibraryStatus(L('libScanning'));
   const directories = $('library-directory').value.split(/\r\n?|\n/).map(s => s.trim()).filter(Boolean);
-  if (directories.length > 12) throw new Error('额外目录最多 12 个');
+  if (directories.length > 12) throw new Error(L('errMaxDirs'));
   const result = await api('library/scan', { directories });
   libraryItems = result.items;
   hiddenIds = new Set(result.hiddenIds || []);
   libraryTruncated = Boolean(result.truncated);
   libraryPage = 0;
   thumbnailCache.clear();
-  $('library-sources').textContent = result.sources.length
-    ? result.sources.map(s => `${s.source}：${s.path}`).join('\n')
-    : '未自动发现 Steam / Wallpaper Engine，请手动导入目录。';
+  lastSources = result.sources || [];
+  const lang = currentLang();
+  $('library-sources').textContent = lastSources.length
+    ? lastSources.map(s => `${localizeSource(lang, s.source)}: ${s.path}`).join('\n')
+    : L('sourceEmpty');
   renderLibrary();
   setLibraryStatus(librarySummary());
 }
@@ -396,6 +434,10 @@ async function runBusy(work) {
 function patchSettings(patch, immediate = false) {
   try { settings = validateSettings(patch, settings); }
   catch (err) { setSaveState(err.message, true); return; }
+  if (Object.hasOwn(patch, 'language')) {
+    applyLanguage();
+    if (libraryItems !== null) renderLibrary();
+  }
   renderControls();
   clearTimeout(saveTimer);
   const send = async () => {
@@ -403,7 +445,7 @@ function patchSettings(patch, immediate = false) {
       const res = await api('settings', settings);
       settings = res.settings;
       setStatus(res.status);
-      setSaveState(mode === 'preview' ? '实时预览已同步' : '已实时生效');
+      setSaveState(mode === 'preview' ? L('toastPreviewSynced') : L('toastSaved'));
     } catch (err) { setSaveState(err.message, true); }
   };
   if (immediate) void send();
@@ -437,6 +479,13 @@ document.querySelectorAll('[data-theme]').forEach(btn => btn.addEventListener('c
   const theme = btn.dataset.theme;
   patchSettings({ theme, caret: THEME_CARETS[theme] || settings.caret, enabled: true }, true);
 }));
+document.querySelectorAll('[data-perf]').forEach(btn => btn.addEventListener('click', () => {
+  const perf = btn.dataset.perf;
+  const suggestedFps = perf === 'eco' ? 30 : perf === 'ultra' ? 60 : settings.fpsLimit;
+  patchSettings({ performanceMode: perf, fpsLimit: suggestedFps }, true);
+}));
+document.querySelectorAll('[data-fps]').forEach(btn => btn.addEventListener('click', () => patchSettings({ fpsLimit: Number(btn.dataset.fps) }, true)));
+$('lang-toggle')?.addEventListener('click', () => patchSettings({ language: currentLang() === 'en' ? 'zh-CN' : 'en' }, true));
 document.querySelectorAll('[data-rate]').forEach(btn => btn.addEventListener('click', () => patchSettings({ playbackRate: Number(btn.dataset.rate) }, true)));
 document.querySelectorAll('[data-fit]').forEach(btn => btn.addEventListener('click', () => patchSettings({ fit: btn.dataset.fit }, true)));
 for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled']) {
@@ -444,13 +493,13 @@ for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnable
 }
 $('toggle-enabled').addEventListener('change', () => patchSettings({ enabled: $('toggle-enabled').checked }, true));
 $('disable').addEventListener('click', () => patchSettings({ enabled: false }, true));
-$('defaults').addEventListener('click', () => patchSettings({ ...DEFAULTS, enabled: settings.enabled }, true));
+$('defaults').addEventListener('click', () => patchSettings({ ...DEFAULTS, enabled: settings.enabled, language: settings.language }, true));
 $('btn-pause').addEventListener('click', () => patchSettings({ paused: !settings.paused }, true));
 $('btn-reload').addEventListener('click', () => void runBusy(async () => {
   const res = await api('reload');
   setStatus(res.status);
   updatePreview(res.reloadNonce);
-  setSaveState('已刷新壁纸');
+  setSaveState(L('toastReloaded'));
 }));
 $('clear-media').addEventListener('click', () => void runBusy(async () => {
   const res = await api('clear-media');
@@ -459,7 +508,7 @@ $('clear-media').addEventListener('click', () => void runBusy(async () => {
   setStatus(res.status);
   renderControls();
   if (libraryItems) renderLibrary();
-  setSaveState('已恢复内置氛围');
+  setSaveState(L('toastCleared'));
 }));
 
 $('library-search').addEventListener('input', () => { libraryPage = 0; renderLibrary(); });
@@ -476,8 +525,8 @@ $('library-directory-form').addEventListener('submit', e => { e.preventDefault()
 
 async function importFolderPath(directory) {
   const clean = directory.trim();
-  if (!clean) throw new Error('请输入本地文件夹路径');
-  setLibraryStatus('正在导入并扫描目录…');
+  if (!clean) throw new Error(L('errEmptyPath'));
+  setLibraryStatus(L('libImporting'));
   const res = await api('library/import-directory', { directory: clean, autoSelect: true });
   $('library-directory').value = (res.libraryDirectories || []).join('\n');
   libraryItems = res.scan.items;
@@ -485,14 +534,16 @@ async function importFolderPath(directory) {
   libraryTruncated = Boolean(res.scan.truncated);
   libraryPage = 0;
   thumbnailCache.clear();
-  $('library-sources').textContent = res.scan.sources.map(s => `${s.source}：${s.path}`).join('\n');
+  lastSources = res.scan.sources || [];
+  const lang = currentLang();
+  $('library-sources').textContent = lastSources.map(s => `${localizeSource(lang, s.source)}: ${s.path}`).join('\n');
   if (res.selected) {
     media = res.media;
     settings = res.settings;
     librarySelection = res.librarySelection;
     setStatus(res.status);
-    setSaveState(`已应用「${media?.name || '壁纸'}」`);
-  } else setSaveState('目录已导入');
+    setSaveState(L('toastApplied', { title: localizeBuiltinTitle(lang, media?.name || L('wallpaperLabel')) }));
+  } else setSaveState(L('toastImportedDir'));
   $('folder-import-box').hidden = true;
   $('folder-import-path').value = '';
   renderControls();
@@ -517,8 +568,8 @@ $('media-input').addEventListener('change', event => {
   if (!file) return;
   void runBusy(async () => {
     if (file.name.toLowerCase().endsWith('.pkg')) {
-      if (file.size > MAX_PKG_BYTES) throw new Error('scene.pkg 超过 256 MB，建议直接导入目录免复制播放');
-      setSaveState(`正在导入场景包「${file.name}」…`);
+      if (file.size > MAX_PKG_BYTES) throw new Error(L('errPkgTooLarge'));
+      setSaveState(L('toastImportingPkg', { name: file.name }));
       const res = await uploadPkg(file);
       media = res.media;
       settings = res.settings;
@@ -526,18 +577,18 @@ $('media-input').addEventListener('change', event => {
       setStatus(res.status);
       renderControls();
       if (libraryItems !== null) await scanLibrary();
-      setSaveState(`已导入场景「${media.name}」`);
+      setSaveState(L('toastImportedPkg', { name: media.name }));
       return;
     }
-    if (file.size > MAX_MEDIA_BYTES) throw new Error('单文件超过 32 MB，建议通过「导入目录」免复制流式播放');
+    if (file.size > MAX_MEDIA_BYTES) throw new Error(L('errFileTooLarge'));
     if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'].includes(file.type)) {
-      throw new Error('支持 PNG/JPG/WebP/GIF/MP4/WebM 或 scene.pkg');
+      throw new Error(L('errFileType'));
     }
-    setSaveState('正在导入本地文件…');
+    setSaveState(L('toastImportingFile'));
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('无法读取所选文件'));
+      reader.onerror = () => reject(new Error(L('errReadFile')));
       reader.readAsDataURL(file);
     });
     const res = await api('media', { name: file.name, dataUrl });
@@ -549,7 +600,7 @@ $('media-input').addEventListener('change', event => {
       setStatus(en.status);
     }
     renderControls();
-    setSaveState(`已导入「${file.name}」`);
+    setSaveState(L('toastImportedFile', { name: file.name }));
   });
 });
 
@@ -568,6 +619,7 @@ window.addEventListener('message', event => {
 });
 $('preview')?.addEventListener('load', () => { previewReady = true; updatePreview(); });
 
+applyLanguage();
 try {
   const state = await api('state');
   settings = state.settings;
@@ -577,13 +629,14 @@ try {
   hiddenIds = new Set(state.hiddenIds || []);
   $('library-directory').value = (Array.isArray(state.libraryDirectories) ? state.libraryDirectories : []).join('\n');
   loaded = true;
+  applyLanguage();
   renderControls();
   setStatus(state.status);
-  setSaveState(state.libraryWarning || '就绪 · 修改即时生效', Boolean(state.libraryWarning));
+  setSaveState(state.libraryWarning || L('toastReady'), Boolean(state.libraryWarning));
   void runBusy(scanLibrary);
 } catch (err) {
   setSaveState(err.message, true);
-  $('connection').textContent = '初始化失败';
+  $('connection').textContent = L('connFailed');
 }
 
 setInterval(async () => {

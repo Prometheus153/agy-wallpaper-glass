@@ -3,10 +3,17 @@ export const MAX_PKG_BYTES = 256 * 1024 * 1024;
 export const ALLOWED_THEMES = Object.freeze(['midnight', 'frost', 'ember']);
 export const ALLOWED_RATES = Object.freeze([0.5, 0.75, 1, 1.25, 1.5, 2]);
 export const ALLOWED_FITS = Object.freeze(['cover', 'contain', 'center', 'stretch']);
+export const ALLOWED_LANGUAGES = Object.freeze(['auto', 'zh-CN', 'en']);
+export const ALLOWED_PERF_MODES = Object.freeze(['eco', 'balanced', 'ultra']);
+export const ALLOWED_FPS_LIMITS = Object.freeze([30, 45, 60]);
 
 export const DEFAULTS = Object.freeze({
   enabled: false,
+  language: 'auto',
   theme: 'midnight',
+  // Performance
+  performanceMode: 'balanced',
+  fpsLimit: 30,
   // Liquid Glass appearance
   blur: 16,
   scrim: 40,
@@ -84,6 +91,12 @@ export function validateSettings(input, previous = DEFAULTS) {
       if (!Number.isInteger(value) || value < min || value > max) throw new Error(`${key} 超出范围`);
     } else if (key === 'theme') {
       if (!ALLOWED_THEMES.includes(value)) throw new Error('未知主题');
+    } else if (key === 'language') {
+      if (!ALLOWED_LANGUAGES.includes(value)) throw new Error('语言设置无效');
+    } else if (key === 'performanceMode') {
+      if (!ALLOWED_PERF_MODES.includes(value)) throw new Error('性能档位无效');
+    } else if (key === 'fpsLimit') {
+      if (!Number.isInteger(value) || !ALLOWED_FPS_LIMITS.includes(value)) throw new Error('帧率上限无效');
     } else if (key === 'playbackRate') {
       if (typeof value !== 'number' || !ALLOWED_RATES.includes(value)) throw new Error('播放倍速无效');
     } else if (key === 'fit') {

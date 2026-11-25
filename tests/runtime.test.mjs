@@ -144,7 +144,7 @@ test('scene wallpaper mounts player iframe, syncs playback/properties, and appli
   const css = h.doc.head.children[0].textContent;
   assert.match(css, /brightness\(85%\) contrast\(110%\) saturate\(150%\)/);
   assert.match(css, /opacity: 0\.9;/);
-  assert.ok(posted.some(p => p.msg.type === 'agy-glass-player-update' && p.msg.payload.volume === 40 && p.msg.payload.properties.bloom === true));
+  assert.ok(posted.some(p => p.msg.type === 'agy-glass-player-update' && p.msg.payload.volume === 40 && p.msg.payload.properties.bloom === true && p.msg.payload.performanceMode === 'balanced' && p.msg.payload.fpsLimit === 30));
   h.run({ ...h.payload, reloadNonce: 'r2', media: { kind: 'scene', url: 'http://127.0.0.1:47831/player/11111111-1111-4111-8111-111111111111' } });
   assert.ok(posted.some(p => p.msg.type === 'agy-glass-player-reload'));
   h.context.__agyGlass.dispose();
@@ -162,6 +162,9 @@ test('frost theme enforces light readable surfaces, split borders, review froste
   assert.match(css, /\[data-panel-resize-handle-id\]/);
   assert.match(css, /\[data-testid\*="review"\]/);
   assert.match(css, /iframe\[src\*="127\.0\.0\.1:47831\/"\]/);
+  assert.match(css, /iframe\[src\*="agy-wallpaper-glass"\]/);
+  assert.match(css, /contain: strict; transform: translateZ\(0\);/);
+  assert.equal(/\.agy-glass-backdrop \{[^}]*filter:/.test(css), false);
   assert.match(css, /max-width: 356px !important/);
   assert.match(css, /#agy-glass-pet-root \{ position: fixed; z-index: 25; pointer-events: none;/);
   assert.match(css, /#agy-glass-pet-root\.obscured \{ z-index: 0 !important; opacity: 0 !important; \}/);

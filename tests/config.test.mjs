@@ -34,6 +34,7 @@ test('validate new playback, appearance, migration and scene property settings',
     playbackRate: 1.5, fit: 'contain', flipX: true, volume: 35,
     glassSaturation: 180, pointerParallax: false,
     petEnabled: true, petSize: 108, petY: 62,
+    language: 'en', performanceMode: 'eco', fpsLimit: 45,
   });
   assert.equal(next.theme, 'ember');
   assert.equal(next.playbackRate, 1.5);
@@ -41,7 +42,10 @@ test('validate new playback, appearance, migration and scene property settings',
   assert.equal(next.flipX, true);
   assert.equal(next.petSize, 108);
   assert.equal(next.petY, 62);
-  for (const bad of [{ theme: 'cyan' }, { playbackRate: 3 }, { fit: 'tile' }, { brightness: 10 }, { volume: 101 }, { zoom: 40 }, { wallpaperTransparency: -1 }, { petSize: 30 }, { petY: 99 }]) {
+  assert.equal(next.language, 'en');
+  assert.equal(next.performanceMode, 'eco');
+  assert.equal(next.fpsLimit, 45);
+  for (const bad of [{ theme: 'cyan' }, { language: 'jp' }, { performanceMode: 'turbo' }, { fpsLimit: 120 }, { playbackRate: 3 }, { fit: 'tile' }, { brightness: 10 }, { volume: 101 }, { zoom: 40 }, { wallpaperTransparency: -1 }, { petSize: 30 }, { petY: 99 }]) {
     assert.throws(() => validateSettings(bad));
   }
   const migrated = migrateSavedSettings({ theme: 'cyan', autoRotate: true, activePlaylistId: 'old', rotateMinutes: 10, blur: 20 });

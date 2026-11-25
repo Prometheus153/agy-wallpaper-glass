@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync, renameSync, rmSync, cpSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -241,6 +241,8 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
           zoom: current.settings.zoom,
           flipX: current.settings.flipX,
           pointerParallax: current.settings.pointerParallax,
+          performanceMode: current.settings.performanceMode,
+          fpsLimit: current.settings.fpsLimit,
           properties: activeSceneProps(),
         });
         const html = readFileSync(join(ROOT, 'player.html'), 'utf8')
@@ -310,10 +312,11 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
         const [file, type] = STATIC.get(path);
         let body = readFileSync(join(ROOT, file), 'utf8');
         if (path === '/panel.js' || path === '/preview.js') {
+          const i18nSrc = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8');
           const shared = path === '/panel.js'
-            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8')
-            : readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
-          body = `(async () => {\n${shared.replace(/^export /gm, '')}\n${body.replace(/^import .*;\r?\n/gm, '')}\n})().catch(error => console.error('AGY Glass initialization failed:', error));`;
+            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8') + '\n' + i18nSrc
+            : i18nSrc + '\n' + readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
+          body = `(async () => {\n${shared.replace(/^export /gm, '')}\n${body.replace(/^import .*;\r?\n/gm, '')}\n})().catch(error => console.error('AGY Wallpaper Glass initialization failed:', error));`;
         }
         if (file === 'index.html') {
           const parsedUrl = new URL(req.url, 'http://127.0.0.1');
@@ -466,8 +469,9 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
 
   server.requestTimeout = 30000;
   server.headersTimeout = 10000;
+  const i18nSource = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8').replace(/^export /gm, '');
   const petSource = readFileSync(join(ROOT, 'pet.mjs'), 'utf8').replace(/^export /gm, '');
-  const runtimeBundle = `(payload) => {\n${petSource}\nreturn (${installGlass.toString()})(payload);\n}`;
+  const runtimeBundle = `(payload) => {\n${i18nSource}\n${petSource}\nreturn (${installGlass.toString()})(payload);\n}`;
   if (!preview) bridge = startBridge({ getPayload, runtimeSource: runtimeBundle });
   try {
     await new Promise((resolveListen, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolveListen); });
@@ -485,10 +489,15 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const preview = process.argv.includes('--preview');
   const port = Number(process.env.ANTIGRAVITY_SIDECAR_WEB_PORT || (preview ? 47831 : NaN));
-  const dataDir = preview ? join(ROOT, '..', '..', '.preview-state') : join(homedir(), '.gemini', 'antigravity', 'agy-glass');
+  const newDataDir = join(homedir(), '.gemini', 'antigravity', 'agy-wallpaper-glass');
+  const legacyDataDir = join(homedir(), '.gemini', 'antigravity', 'agy-glass');
+  if (!preview && !existsSync(newDataDir) && existsSync(legacyDataDir)) {
+    try { cpSync(legacyDataDir, newDataDir, { recursive: true }); } catch {}
+  }
+  const dataDir = preview ? join(ROOT, '..', '..', '.preview-state') : newDataDir;
   const startBridge = preview ? undefined : (await import('./injector.mjs')).startInjector;
   const app = await startServer({ preview, port, dataDir, token: process.env.ANTIGRAVITY_SIDECAR_UI_TOKEN, startBridge });
-  console.log(preview ? `AGY Glass preview: http://127.0.0.1:${app.port}` : '[agy-glass] sidecar ready');
+  console.log(preview ? `AGY Wallpaper Glass preview: http://127.0.0.1:${app.port}` : '[agy-wallpaper-glass] sidecar ready');
   let closing = false;
   const close = async () => { if (closing) return; closing = true; await app.close(); process.exit(0); };
   process.on('SIGINT', close);

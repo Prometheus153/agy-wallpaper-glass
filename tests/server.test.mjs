@@ -337,4 +337,7 @@ test('pet assets serve with CORS and ephemeral drawer key authenticates floating
     body: '{}',
   });
   assert.equal(badRes.status, 401);
+  const panelJs = await (await fetch(url + '/panel.js')).text();
+  assert.match(panelJs, /resolveLanguage/);
+  assert.match(panelJs, /Performance & Smoothness/);
 });

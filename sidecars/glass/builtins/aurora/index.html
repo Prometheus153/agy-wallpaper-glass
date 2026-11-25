@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Aurora</title>
@@ -8,22 +8,28 @@
 <body>
 <canvas id="c"></canvas>
 <script>
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
+const c = document.getElementById('c'), ctx = c.getContext('2d', { alpha: false });
+let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1, bgGrad = null, lakeGrad = null, last = 0, raf = 0;
 const stars = Array.from({ length: 140 }, (_, i) => ({ x: Math.random(), y: Math.random() * 0.72, r: 0.6 + Math.random() * 1.4, p: i * 1.7 }));
-function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
+function resize() {
+  const dpr = Math.min(1.25, devicePixelRatio || 1);
+  w = c.width = Math.max(1, Math.round(innerWidth * dpr));
+  h = c.height = Math.max(1, Math.round(innerHeight * dpr));
+  bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrad.addColorStop(0, '#050b16'); bgGrad.addColorStop(0.55, '#0b1c30'); bgGrad.addColorStop(1, '#081320');
+  lakeGrad = ctx.createLinearGradient(0, h * 0.72, 0, h);
+  lakeGrad.addColorStop(0, 'rgba(20,58,76,0.12)'); lakeGrad.addColorStop(1, 'rgba(5,12,24,0.65)');
+}
 addEventListener('resize', resize); resize();
-addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); }, { passive: true });
 window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
 function drawRibbon(baseY, amp, freq, phase, c1, c2, alpha) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
   const px = (mx - 0.5) * w * 0.06, py = (my - 0.5) * h * 0.04;
   const g = ctx.createLinearGradient(0, baseY - h * 0.24, 0, baseY + h * 0.22);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.42, c1); g.addColorStop(0.7, c2); g.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.globalAlpha = alpha;
-  ctx.beginPath();
-  const steps = 42;
+  ctx.fillStyle = g; ctx.globalAlpha = alpha; ctx.beginPath();
+  const steps = 32;
   for (let i = 0; i <= steps; i++) {
     const u = i / steps, x = u * w;
     const y = baseY + py + Math.sin(u * freq + t * 0.9 + phase) * amp + Math.cos(u * freq * 1.9 - t * 0.55 + phase) * amp * 0.45 + Math.sin(u * 3 + px * 0.002) * 18;
@@ -36,11 +42,14 @@ function drawRibbon(baseY, amp, freq, phase, c1, c2, alpha) {
   }
   ctx.closePath(); ctx.fill(); ctx.restore();
 }
-function frame() {
-  t += 0.009 * speed;
-  const bg = ctx.createLinearGradient(0, 0, 0, h);
-  bg.addColorStop(0, '#050b16'); bg.addColorStop(0.55, '#0b1c30'); bg.addColorStop(1, '#081320');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+function frame(now) {
+  if (document.hidden) { raf = 0; return; }
+  raf = requestAnimationFrame(frame);
+  if (last && now - last < 31) return;
+  const dt = last ? Math.min(0.06, (now - last) / 1000) : 0.033;
+  last = now;
+  t += dt * 0.54 * speed;
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
   const count = Math.min(stars.length, Math.round(90 * density));
   for (let i = 0; i < count; i++) {
     const s = stars[i], a = 0.28 + 0.52 * (0.5 + 0.5 * Math.sin(t * 2.2 + s.p));
@@ -50,13 +59,10 @@ function frame() {
   drawRibbon(h * 0.34, h * 0.075, 4.2, 0.2, 'rgba(56,232,210,0.52)', 'rgba(56,189,248,0.18)', 0.78);
   drawRibbon(h * 0.44, h * 0.065, 5.1, 2.1, 'rgba(129,140,248,0.44)', 'rgba(45,212,191,0.2)', 0.68);
   drawRibbon(h * 0.28, h * 0.055, 3.4, 4.0, 'rgba(94,234,212,0.36)', 'rgba(167,139,250,0.16)', 0.6);
-  // Subtle lake shimmer
-  const lake = ctx.createLinearGradient(0, h * 0.72, 0, h);
-  lake.addColorStop(0, 'rgba(20,58,76,0.12)'); lake.addColorStop(1, 'rgba(5,12,24,0.65)');
-  ctx.fillStyle = lake; ctx.fillRect(0, h * 0.72, w, h * 0.28);
-  requestAnimationFrame(frame);
+  ctx.fillStyle = lakeGrad; ctx.fillRect(0, h * 0.72, w, h * 0.28);
 }
-requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(frame); } });
+raf = requestAnimationFrame(frame);
 </script>
 </body>
 </html>

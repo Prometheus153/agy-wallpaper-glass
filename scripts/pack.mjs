@@ -7,8 +7,8 @@ import { promisify } from 'node:util';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const distDir = join(root, 'dist');
-const stageDir = join(distDir, 'agy-glass');
-const zipPath = join(distDir, `agy-glass-v${pkg.version}.zip`);
+const stageDir = join(distDir, 'agy-wallpaper-glass');
+const zipPath = join(distDir, `agy-wallpaper-glass-v${pkg.version}.zip`);
 
 const include = [
   'package.json',
@@ -16,6 +16,7 @@ const include = [
   'logo.svg',
   'LICENSE',
   'README.md',
+  'README.zh-CN.md',
   'install.bat',
   'scripts/install.mjs',
   'sidecars',
@@ -46,7 +47,7 @@ export async function packRelease() {
       `Compress-Archive -Path '${stageDir.replace(/'/g, "''")}' -DestinationPath '${zipPath.replace(/'/g, "''")}' -Force`,
     ], { windowsHide: true });
   } else {
-    await promisify(execFile)('zip', ['-r', '-q', zipPath, 'agy-glass'], { cwd: distDir });
+    await promisify(execFile)('zip', ['-r', '-q', zipPath, 'agy-wallpaper-glass'], { cwd: distDir });
   }
 
   await rm(stageDir, { recursive: true, force: true });

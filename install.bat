@@ -1,27 +1,27 @@
 @echo off
 chcp 65001 >nul
-title AGY Glass v1.0.0 安装与管理工具
+title AGY Wallpaper Glass v1.1.0 Installer
 cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [错误] 未检测到 Node.js，请先安装 Node.js 22.12 或更高版本：https://nodejs.org/
+  echo [Error / 错误] Node.js 22.12+ is required: https://nodejs.org/
   pause
   exit /b 1
 )
 
-echo ========================================================
-echo   AGY Glass v1.0.0 · Antigravity 液态玻璃壁纸库插件
-echo   支持 Wallpaper Engine 场景(Scene)/网页/视频/图片壁纸
-echo ========================================================
+echo ==============================================================
+echo   AGY Wallpaper Glass v1.1.0 (agy-wallpaper-glass)
+echo   Antigravity Liquid Glass + Wallpaper Engine (EN / 中文)
+echo ==============================================================
 echo.
-echo   [1] 首次安装到本机 Antigravity 插件目录
-echo   [2] 更新已安装的 AGY Glass（保留旧版备份与个人配置）
-echo   [3] 卸载 AGY Glass（保留个人壁纸数据与备份）
-echo   [4] 启动浏览器实时预览（不修改 Antigravity）
-echo   [0] 退出
+echo   [1] Install plugin / 首次安装到本机 Antigravity 插件目录
+echo   [2] Update plugin  / 更新并自动迁移旧版（保留备份与个人数据）
+echo   [3] Uninstall      / 卸载插件（保留个人壁纸数据与备份）
+echo   [4] Live Preview   / 启动浏览器实时预览（不修改 Antigravity）
+echo   [0] Exit           / 退出
 echo.
-set /p choice=请输入数字并回车 [1-4]: 
+set /p choice=Select [1-4] / 请输入数字并回车 [1-4]: 
 
 if "%choice%"=="1" (
   node scripts\install.mjs
@@ -36,7 +36,7 @@ if "%choice%"=="3" (
   goto done
 )
 if "%choice%"=="4" (
-  echo 正在启动本地预览，请在浏览器打开控制台显示的地址，按 Ctrl+C 结束...
+  echo Starting local preview / 正在启动本地预览，按 Ctrl+C 结束...
   node sidecars\glass\server.mjs --preview
   goto done
 )

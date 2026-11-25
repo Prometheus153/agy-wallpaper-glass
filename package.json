@@ -1,9 +1,9 @@
 {
-  "name": "agy-glass",
-  "version": "1.0.0",
+  "name": "agy-wallpaper-glass",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "Wallpaper Engine backgrounds (Scene/Web via bundled WebWallGL, Video, Image) and iOS-style Liquid Glass styling Sidecar for Antigravity Desktop",
+  "description": "Wallpaper Engine backgrounds (Scene/Web via bundled WebWallGL, Video, Image), 6 built-in animated wallpapers, bilingual EN/ZH UI, interactive catgirl pet, and iOS-style Liquid Glass styling Sidecar for Antigravity Desktop",
   "homepage": "https://github.com/Prometheus153/agy-wallpaper-glass",
   "repository": {
     "type": "git",

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Deep Tide</title>
@@ -8,41 +8,51 @@
 <body>
 <canvas id="c"></canvas>
 <script>
-const c = document.getElementById('c'), ctx = c.getContext('2d');
-let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1;
-const bubbles = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: 1.5 + Math.random() * 5, vy: 0.0005 + Math.random() * 0.0012, p: Math.random() * 6.28 }));
-function resize() { const dpr = Math.min(2, devicePixelRatio || 1); w = c.width = Math.max(1, innerWidth * dpr); h = c.height = Math.max(1, innerHeight * dpr); }
+const c = document.getElementById('c'), ctx = c.getContext('2d', { alpha: false });
+let w = 0, h = 0, t = 0, mx = 0.5, my = 0.5, speed = 1, density = 1, bgGrad = null, rayGrad = null, last = 0, raf = 0;
+const bubbles = Array.from({ length: 100 }, () => ({ x: Math.random(), y: Math.random(), r: 1.5 + Math.random() * 5, vy: 0.0005 + Math.random() * 0.0012, p: Math.random() * 6.28 }));
+function resize() {
+  const dpr = Math.min(1.25, devicePixelRatio || 1);
+  w = c.width = Math.max(1, Math.round(innerWidth * dpr));
+  h = c.height = Math.max(1, Math.round(innerHeight * dpr));
+  bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+  bgGrad.addColorStop(0, '#0c3554'); bgGrad.addColorStop(0.5, '#07223a'); bgGrad.addColorStop(1, '#041221');
+  rayGrad = ctx.createLinearGradient(0, 0, 0, h * 0.88);
+  rayGrad.addColorStop(0, 'rgba(125,211,252,0.18)'); rayGrad.addColorStop(0.6, 'rgba(56,189,248,0.06)'); rayGrad.addColorStop(1, 'rgba(0,0,0,0)');
+}
 addEventListener('resize', resize); resize();
-addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); });
+addEventListener('mousemove', e => { mx = e.clientX / Math.max(1, innerWidth); my = e.clientY / Math.max(1, innerHeight); }, { passive: true });
 window.wallpaperPropertyListener = { applyUserProperties(p) { if (p.speed) speed = Number(p.speed.value) || 1; if (p.density) density = Number(p.density.value) || 1; } };
-function frame() {
-  t += 0.01 * speed;
-  const bg = ctx.createLinearGradient(0, 0, 0, h);
-  bg.addColorStop(0, '#0c3554'); bg.addColorStop(0.5, '#07223a'); bg.addColorStop(1, '#041221');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+function frame(now) {
+  if (document.hidden) { raf = 0; return; }
+  raf = requestAnimationFrame(frame);
+  if (last && now - last < 31) return;
+  const dt = last ? Math.min(0.06, (now - last) / 1000) : 0.033;
+  last = now;
+  const step = dt * 60;
+  t += 0.01 * step * speed;
+  ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rayGrad;
   for (let i = 0; i < 6; i++) {
     const base = w * (0.1 + i * 0.16) + Math.sin(t * 0.6 + i * 1.3) * w * 0.04 + (mx - 0.5) * 40;
     const spread = w * (0.08 + (i % 3) * 0.03);
-    const rg = ctx.createLinearGradient(base, 0, base + w * 0.08, h * 0.88);
-    rg.addColorStop(0, 'rgba(125,211,252,0.18)'); rg.addColorStop(0.6, 'rgba(56,189,248,0.06)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rg; ctx.beginPath();
+    ctx.beginPath();
     ctx.moveTo(base - spread * 0.4, 0); ctx.lineTo(base + spread * 0.4, 0);
     ctx.lineTo(base + spread * 1.4, h); ctx.lineTo(base - spread * 0.6, h); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
   const count = Math.min(bubbles.length, Math.round(56 * density));
+  ctx.strokeStyle = 'rgba(186,230,253,0.34)'; ctx.fillStyle = 'rgba(125,211,252,0.1)'; ctx.lineWidth = 1.2;
   for (let i = 0; i < count; i++) {
     const b = bubbles[i];
-    b.y = (b.y - b.vy * speed + 1) % 1;
+    b.y = (b.y - b.vy * step * speed + 1) % 1;
     const x = b.x * w + Math.sin(t * 1.4 + b.p) * 14 + (mx - 0.5) * 18;
     const y = b.y * h + (my - 0.5) * 12;
-    ctx.strokeStyle = 'rgba(186,230,253,0.34)'; ctx.fillStyle = 'rgba(125,211,252,0.1)';
-    ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, b.r, 0, 6.283); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, b.r, 0, 6.283); ctx.fill(); ctx.stroke();
   }
-  requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !raf) { last = 0; raf = requestAnimationFrame(frame); } });
+raf = requestAnimationFrame(frame);
 </script>
 </body>
 </html>
