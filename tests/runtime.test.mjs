@@ -160,7 +160,7 @@ test('frost theme enforces light readable surfaces, split borders, review froste
   assert.match(css, /:is\(button,\[role="button"\]\) \{ --background: #f8fafc !important; \}/);
   assert.match(css, /\[data-testid="agent-input-box"\] div:not\(button\):not\(\[role="button"\]\):not\(button \*\):not\(\[role="button"\] \*\)/);
   assert.match(css, /\[data-panel-resize-handle-id\]/);
-  assert.match(css, /\[data-testid\*="review"\]/);
+  assert.match(css, /\[data-testid\*="review"\].*:not\(button\).*:not\(\[role="menuitem"\]\).*:not\(\[data-testid\*="overview"\] \*\)/);
   assert.match(css, /iframe\[src\*="127\.0\.0\.1:47831\/"\]/);
   assert.match(css, /iframe\[src\*="agy-wallpaper-glass"\]/);
   assert.match(css, /contain: strict; transform: translateZ\(0\);/);
