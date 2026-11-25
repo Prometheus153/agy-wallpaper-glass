@@ -232,6 +232,13 @@ function renderSceneProperties() {
   }
 }
 
+function syncPaginationButtons() {
+  $('library-prev').disabled = !loaded || busy || libraryPage <= 0;
+  $('library-next').disabled = !loaded || busy || libraryPage >= libraryPages - 1;
+  $('library-refresh').disabled = !loaded || busy;
+  $('btn-import-folder').disabled = !loaded || busy;
+}
+
 function renderControls() {
   for (const [key, fmt] of SLIDERS) {
     const el = $(key);
@@ -256,6 +263,7 @@ function renderControls() {
   document.querySelectorAll('[data-rate]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.rate) === settings.playbackRate));
   document.querySelectorAll('[data-fit]').forEach(btn => btn.classList.toggle('active', btn.dataset.fit === settings.fit));
 
+  syncPaginationButtons();
   updateNowPlaying();
   renderSceneProperties();
   updatePreview();
@@ -370,8 +378,7 @@ function renderLibrary() {
   }
 
   $('library-page').textContent = L('libPage', { total: matches.length, cur: libraryPages ? libraryPage + 1 : 0, pages: libraryPages });
-  $('library-prev').disabled = !loaded || busy || libraryPage <= 0;
-  $('library-next').disabled = !loaded || busy || libraryPage >= libraryPages - 1;
+  syncPaginationButtons();
   $('library-empty').hidden = matches.length > 0;
   $('library-empty').textContent = libraryItems === null
     ? L('emptyScanning')
@@ -518,8 +525,18 @@ document.querySelectorAll('#library-filter-chips .chip').forEach(chip => chip.ad
   document.querySelectorAll('#library-filter-chips .chip').forEach(c => c.classList.toggle('active', c === chip));
   renderLibrary();
 }));
-$('library-prev').addEventListener('click', () => { libraryPage--; renderLibrary(); });
-$('library-next').addEventListener('click', () => { libraryPage++; renderLibrary(); });
+$('library-prev').addEventListener('click', () => {
+  if (libraryPage <= 0) return;
+  libraryPage--;
+  renderLibrary();
+  $('drawer-scroll').scrollTop = 0;
+});
+$('library-next').addEventListener('click', () => {
+  if (libraryPage >= libraryPages - 1) return;
+  libraryPage++;
+  renderLibrary();
+  $('drawer-scroll').scrollTop = 0;
+});
 $('library-refresh').addEventListener('click', () => void runBusy(scanLibrary));
 $('library-directory-form').addEventListener('submit', e => { e.preventDefault(); void runBusy(scanLibrary); });
 
