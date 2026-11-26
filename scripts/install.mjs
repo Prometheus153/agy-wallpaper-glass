@@ -167,7 +167,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   if (args.some(arg => !['--help', '--dry-run', '--update', '--uninstall'].includes(arg))) throw new Error('未知参数；使用 --help 查看说明');
   if (args.includes('--help')) {
-    console.log(`AGY Wallpaper Glass v1.2.0 (${PLUGIN_NAME}) · Windows & macOS Antigravity Desktop Plugin
+    console.log(`AGY Wallpaper Glass v1.3.0 (${PLUGIN_NAME}) · Windows & macOS Antigravity Desktop Plugin
 Requires Node.js >=22.12 and Antigravity Desktop local DevTools port.
 node scripts/install.mjs             First-time install (disabled by default)
 node scripts/install.mjs --update    Update / migrate legacy agy-glass with backup

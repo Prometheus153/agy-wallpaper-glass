@@ -1,4 +1,4 @@
-# AGY Wallpaper Glass (`agy-wallpaper-glass`) v1.2.0
+# AGY Wallpaper Glass (`agy-wallpaper-glass`) v1.3.0
 
 <p align="center">
   <strong>English</strong> | <a href="./README.zh-CN.md">简体中文</a>
@@ -12,6 +12,13 @@ Inspired by `dsh-plugin-wallpaper-engine v1.4.0` and powered by the bundled MIT-
 
 ## Highlights
 
+- **Built-in Toggleable Antigravity Chinese UI & External Pack Coexistence (`v1.3.0`)**
+  - One-click **Antigravity Chinese UI** switch in the *Style* tab (and pet/pill right-click menu) translates menus, sidebar, composer chrome, Overview/Review panes, and Settings dialogs without touching `app.asar` — survives every Antigravity update, works on both Windows & macOS, skips already-Chinese text (coexists with external localization packs), never touches chat messages or code blocks, and restores English losslessly when turned off.
+- **32×32 Dynamic Wallpaper Monet Color Sampling (`v1.3.0`)**
+  - Toggle **Monet Dynamic Color (32×32)** to automatically extract dominant hues from any Scene, Built-in, Video, or Image wallpaper in `< 1ms` and harmonize glass tint, specular borders, active highlights, and caret color across dark and light themes — with live 3-swatch preview in the panel.
+- **Global Quick-Drawer Hotkey & 3 Entry Modes (`v1.3.0`)**
+  - Press **`Ctrl+Alt+W`** (Windows/Linux) or **`⌘+⌥+W`** (macOS) anywhere inside Antigravity to summon or dismiss the floating Liquid Glass drawer (`Esc` to close).
+  - Switch freely between **Catgirl Pet**, **Minimal Glass Pill**, and **Hotkey Only** entry modes.
 - **Cross-Platform Ready (Windows 10/11 & macOS Apple Silicon / Intel)**
   - **macOS First-Class Support (`v1.2.0`)**: GUI-PATH-safe Sidecar launcher (`launch-mac.sh` auto-detects Homebrew `/opt/homebrew/bin/node`, `/usr/local/bin/node`, `nvm`, `fnm`, `volta`, `mise`, `asdf`), native Finder folder picker (`osascript`), `~/` path expansion, `Control+Click` pet support, one-click **`install-mac.command`**, optional standalone **`Antigravity (Glass).app`** debug launcher, and built-in **`scripts/doctor.mjs`** environment checker.
 - **All Wallpaper Formats + 6 Built-in Animated Wallpapers (Offline WebWallGL Bundled)**
@@ -51,7 +58,7 @@ Inspired by `dsh-plugin-wallpaper-engine v1.4.0` and powered by the bundled MIT-
 The repository and release ZIPs already bundle the offline MIT WebWallGL engine (`sidecars/glass/vendor/webwallgl.global.min.js`), 6 built-in animated wallpapers, and desktop pet assets with zero hardcoded user paths.
 
 ### macOS Installation (Apple Silicon & Intel)
-1. Download **`agy-wallpaper-glass-v1.2.0-macos.zip`** (or the universal **`agy-wallpaper-glass-v1.2.0.zip`**) from [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) and unzip it.
+1. Download **`agy-wallpaper-glass-v1.3.0-macos.zip`** (or the universal **`agy-wallpaper-glass-v1.3.0.zip`**) from [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) and unzip it.
 2. Open Terminal in the extracted folder and run (bypasses macOS Gatekeeper quarantine prompt cleanly):
    ```bash
    bash install-mac.command
@@ -61,7 +68,7 @@ The repository and release ZIPs already bundle the offline MIT WebWallGL engine 
 4. Optional: Run **`[4]`** (`node scripts/doctor.mjs`) anytime to verify Node, plugin files, Sidecar launcher, DevTools port, and Steam discovery.
 
 ### Windows Installation
-1. Download **`agy-wallpaper-glass-v1.2.0.zip`** from [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) and extract it.
+1. Download **`agy-wallpaper-glass-v1.3.0.zip`** from [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) and extract it.
 2. Double-click **`install.bat`**:
    - `1`: First-time install to `~/.gemini/config/plugins/agy-wallpaper-glass`
    - `2`: Update / migrate from legacy `agy-glass` (automatically backs up the old plugin and preserves all user settings & imported wallpapers)

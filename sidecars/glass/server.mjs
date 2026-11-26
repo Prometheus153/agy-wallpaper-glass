@@ -135,6 +135,9 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
     reloadNonce,
     sidecarPort: basePort(),
     drawerUrl: `http://127.0.0.1:${basePort()}/?drawer=${drawerKey}`,
+    mediaThumbUrl: activeMedia && (activeMedia.previewFile || activeMedia.kind === 'image')
+      ? `http://127.0.0.1:${basePort()}/thumb/${mediaKey}`
+      : null,
     petAssets: {
       open: `http://127.0.0.1:${basePort()}/assets/pet-open.webp`,
       wink: `http://127.0.0.1:${basePort()}/assets/pet-wink.webp`,
@@ -216,7 +219,7 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
         res.once('close', () => { streams--; });
         try {
           const opened = await library.openMedia(current.libraryMedia);
-          await streamHandle(req, res, opened, reply);
+          await streamHandle(req, res, opened, reply, { 'Access-Control-Allow-Origin': '*' });
         } catch {
           if (res.headersSent) res.destroy();
           else reply(404, { error: '壁纸原文件不可用，请重新选择' });
@@ -290,7 +293,11 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
           const m = /^data:(image\/[a-z+]+);base64,(.+)$/.exec(dataUrl);
           if (!m) { reply(404, { error: 'Invalid preview' }); return; }
           const buf = Buffer.from(m[2], 'base64');
-          res.writeHead(200, { 'Content-Type': m[1], 'Content-Length': buf.length });
+          res.writeHead(200, {
+            'Content-Type': m[1],
+            'Content-Length': buf.length,
+            'Access-Control-Allow-Origin': '*',
+          });
           res.end(buf);
         } catch {
           reply(404, { error: 'Preview unavailable' });
@@ -313,9 +320,10 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
         let body = readFileSync(join(ROOT, file), 'utf8');
         if (path === '/panel.js' || path === '/preview.js') {
           const i18nSrc = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8');
+          const monetSrc = readFileSync(join(ROOT, 'monet.mjs'), 'utf8');
           const shared = path === '/panel.js'
-            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8') + '\n' + i18nSrc
-            : i18nSrc + '\n' + readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
+            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8') + '\n' + i18nSrc + '\n' + monetSrc
+            : i18nSrc + '\n' + monetSrc + '\n' + readFileSync(join(ROOT, 'zh-ui.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
           body = `(async () => {\n${shared.replace(/^export /gm, '')}\n${body.replace(/^import .*;\r?\n/gm, '')}\n})().catch(error => console.error('AGY Wallpaper Glass initialization failed:', error));`;
         }
         if (file === 'index.html') {
@@ -470,8 +478,10 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
   server.requestTimeout = 30000;
   server.headersTimeout = 10000;
   const i18nSource = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8').replace(/^export /gm, '');
+  const monetSource = readFileSync(join(ROOT, 'monet.mjs'), 'utf8').replace(/^export /gm, '');
+  const zhUiSource = readFileSync(join(ROOT, 'zh-ui.mjs'), 'utf8').replace(/^export /gm, '');
   const petSource = readFileSync(join(ROOT, 'pet.mjs'), 'utf8').replace(/^export /gm, '');
-  const runtimeBundle = `(payload) => {\n${i18nSource}\n${petSource}\nreturn (${installGlass.toString()})(payload);\n}`;
+  const runtimeBundle = `(payload) => {\n${i18nSource}\n${monetSource}\n${zhUiSource}\n${petSource}\nreturn (${installGlass.toString()})(payload);\n}`;
   if (!preview) bridge = startBridge({ getPayload, runtimeSource: runtimeBundle });
   try {
     await new Promise((resolveListen, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolveListen); });

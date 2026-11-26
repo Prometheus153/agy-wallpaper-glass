@@ -12,7 +12,7 @@
   <div class="shell">
     <section class="preview-pane" aria-label="Live Preview">
       <div class="preview-bar">
-        <span class="preview-brand"><span class="brand-dot"></span>AGY WALLPAPER GLASS <strong>v1.2</strong></span>
+        <span class="preview-brand"><span class="brand-dot"></span>AGY WALLPAPER GLASS <strong>v1.3</strong></span>
         <span class="preview-hint" data-i18n="previewHint">左侧为主界面液态玻璃实时预览 · 右侧参数即时生效</span>
       </div>
       <div class="preview-frame-wrap">
@@ -117,6 +117,19 @@
                 <span class="theme-name" data-i18n="themeEmber">暖余晖</span>
               </button>
             </div>
+            <div class="switch-row">
+              <span class="s-label" data-i18n="lblDynamicAccent">莫奈动态取色（32×32）</span>
+              <label class="ios-switch"><input type="checkbox" id="dynamicAccent" name="dynamicAccent"><span class="ios-track"></span></label>
+            </div>
+            <div class="monet-bar" id="monet-bar" hidden>
+              <div class="monet-dots" id="monet-dots">
+                <span class="monet-dot" id="monet-dot-0"></span>
+                <span class="monet-dot" id="monet-dot-1"></span>
+                <span class="monet-dot" id="monet-dot-2"></span>
+              </div>
+              <span class="monet-meta" id="monet-meta" data-i18n="monetFallback">请先选择壁纸以自动取色</span>
+              <code class="monet-hex" id="monet-hex"></code>
+            </div>
           </div>
 
           <div class="glass-card">
@@ -171,12 +184,22 @@
           </div>
 
           <div class="glass-card">
-            <div class="card-head"><h2 data-i18n="secPet">猫娘桌宠</h2></div>
+            <div class="card-head"><h2 data-i18n="secPet">界面汉化与快捷入口</h2></div>
             <div class="switch-row">
-              <span class="s-label" data-i18n="lblPetEnabled">显示聊天框右侧桌宠</span>
-              <label class="ios-switch"><input type="checkbox" id="petEnabled" name="petEnabled" checked><span class="ios-track"></span></label>
+              <span class="s-label" data-i18n="lblHostZhUi">Antigravity 界面汉化</span>
+              <label class="ios-switch"><input type="checkbox" id="hostZhUi" name="hostZhUi"><span class="ios-track"></span></label>
             </div>
-            <label class="slider-row"><span class="s-label" data-i18n="lblPetSize">桌宠大小</span><input id="petSize" name="petSize" type="range" min="60" max="140" value="92"><output id="petSize-value" class="val-pill">92px</output></label>
+            <p class="hint-note" data-i18n="hostZhHint">无损开关 · 兼容外部汉化 · 更新不丢 · 不触碰聊天正文</p>
+            <div class="seg-row">
+              <span class="s-label" data-i18n="lblEntryMode">入口形态</span>
+              <div class="seg-pills perf-pills" id="entry-group" role="group" aria-label="Entry Mode">
+                <button type="button" class="pill-opt active" data-entry="pet" data-i18n="entryPet">猫娘桌宠</button>
+                <button type="button" class="pill-opt" data-entry="pill" data-i18n="entryPill">极简胶囊</button>
+                <button type="button" class="pill-opt" data-entry="hotkey" data-i18n="entryHotkey">仅快捷键</button>
+              </div>
+            </div>
+            <p class="hint-note" id="hotkey-hint">随时按 Ctrl+Alt+W 呼出/收起浮窗（Esc 关闭）</p>
+            <label class="slider-row" id="pet-size-row"><span class="s-label" data-i18n="lblPetSize">桌宠大小</span><input id="petSize" name="petSize" type="range" min="60" max="140" value="92"><output id="petSize-value" class="val-pill">92px</output></label>
           </div>
 
           <div class="glass-card" id="scene-props-section" hidden>
@@ -248,7 +271,7 @@
 
       <footer class="drawer-footer">
         <span id="save-state" role="status" aria-live="polite" data-i18n="toastReady">就绪</span>
-        <span class="ver-tag">v1.2</span>
+        <span class="ver-tag">v1.3</span>
       </footer>
     </aside>
   </div>

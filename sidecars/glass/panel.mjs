@@ -1,5 +1,6 @@
 import { DEFAULTS, MAX_MEDIA_BYTES, MAX_PKG_BYTES, validateSettings } from './config.mjs';
 import { localizeBuiltinTitle, localizePropLabel, localizeSource, resolveLanguage, tr } from './i18n.mjs';
+import { sampleMonetFromImageUrl } from './monet.mjs';
 
 const $ = id => document.getElementById(id);
 const mode = document.documentElement.dataset.mode;
@@ -38,6 +39,9 @@ const typeLabel = kind => L({
   video: 'typeVideo', image: 'typeImage', scene: 'typeScene', web: 'typeWeb', application: 'typeApplication',
 }[kind] || 'typeUnknown');
 
+const isMacPlatform = typeof navigator === 'object' && /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent || '');
+const hotkeyCombo = () => (isMacPlatform ? '⌘⌥W' : 'Ctrl+Alt+W');
+
 function applyLanguage() {
   const lang = currentLang();
   document.documentElement.lang = lang;
@@ -47,6 +51,8 @@ function applyLanguage() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = L(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = L(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = L(el.dataset.i18nTitle); });
+  const hk = $('hotkey-hint');
+  if (hk) hk.textContent = L('hotkeyHint', { keys: hotkeyCombo() });
   if (lastSources.length) {
     $('library-sources').textContent = lastSources.map(s => `${localizeSource(lang, s.source)}: ${s.path}`).join('\n');
   } else if (libraryItems !== null) {
@@ -239,6 +245,47 @@ function syncPaginationButtons() {
   $('btn-import-folder').disabled = !loaded || busy;
 }
 
+let monetSampleKey = '';
+let monetSampleSeq = 0;
+
+function updateMonetPreview() {
+  const bar = $('monet-bar');
+  if (!bar) return;
+  const enabled = Boolean(settings.dynamicAccent);
+  bar.hidden = !enabled;
+  if (!enabled) {
+    document.documentElement.style.removeProperty('--accent');
+    monetSampleKey = '';
+    return;
+  }
+  const src = media?.thumbUrl || (media?.kind === 'image' ? (media.dataUrl || media.url) : null) || '';
+  if (!src) {
+    $('monet-meta').textContent = L('monetFallback');
+    $('monet-hex').textContent = '';
+    return;
+  }
+  const key = `${settings.theme}|${src}`;
+  if (key === monetSampleKey) return;
+  monetSampleKey = key;
+  const seq = ++monetSampleSeq;
+  $('monet-meta').textContent = L('monetSampling');
+  void sampleMonetFromImageUrl(src, { theme: settings.theme }).then(pal => {
+    if (seq !== monetSampleSeq || !settings.dynamicAccent) return;
+    if (!pal) {
+      $('monet-meta').textContent = L('monetFallback');
+      $('monet-hex').textContent = '';
+      return;
+    }
+    pal.swatches.forEach((hex, idx) => {
+      const dot = $(`monet-dot-${idx}`);
+      if (dot) dot.style.background = hex;
+    });
+    $('monet-meta').textContent = L('monetActive');
+    $('monet-hex').textContent = pal.accentHex.toUpperCase();
+    document.documentElement.style.setProperty('--accent', pal.accentHex);
+  });
+}
+
 function renderControls() {
   for (const [key, fmt] of SLIDERS) {
     const el = $(key);
@@ -252,7 +299,11 @@ function renderControls() {
   $('flipX').checked = settings.flipX;
   $('pauseWhenHidden').checked = settings.pauseWhenHidden;
   $('pointerParallax').checked = settings.pointerParallax;
-  $('petEnabled').checked = settings.petEnabled;
+  if ($('hostZhUi')) $('hostZhUi').checked = Boolean(settings.hostZhUi);
+  if ($('dynamicAccent')) $('dynamicAccent').checked = Boolean(settings.dynamicAccent);
+  const entry = settings.entryMode || (settings.petEnabled === false ? 'hotkey' : 'pet');
+  document.querySelectorAll('[data-entry]').forEach(btn => btn.classList.toggle('active', btn.dataset.entry === entry));
+  if ($('pet-size-row')) $('pet-size-row').hidden = entry !== 'pet';
   $('toggle-enabled').checked = settings.enabled;
   $('toggle-enabled').disabled = !loaded || busy;
   $('disable').disabled = !loaded || busy || !settings.enabled;
@@ -265,6 +316,7 @@ function renderControls() {
 
   syncPaginationButtons();
   updateNowPlaying();
+  updateMonetPreview();
   renderSceneProperties();
   updatePreview();
 }
@@ -495,8 +547,13 @@ document.querySelectorAll('[data-fps]').forEach(btn => btn.addEventListener('cli
 $('lang-toggle')?.addEventListener('click', () => patchSettings({ language: currentLang() === 'en' ? 'zh-CN' : 'en' }, true));
 document.querySelectorAll('[data-rate]').forEach(btn => btn.addEventListener('click', () => patchSettings({ playbackRate: Number(btn.dataset.rate) }, true)));
 document.querySelectorAll('[data-fit]').forEach(btn => btn.addEventListener('click', () => patchSettings({ fit: btn.dataset.fit }, true)));
-for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled']) {
-  $(boolKey).addEventListener('change', () => patchSettings({ [boolKey]: $(boolKey).checked }, true));
+document.querySelectorAll('[data-entry]').forEach(btn => btn.addEventListener('click', () => {
+  const entryMode = btn.dataset.entry;
+  patchSettings({ entryMode, petEnabled: entryMode === 'pet' }, true);
+}));
+for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'hostZhUi', 'dynamicAccent']) {
+  const el = $(boolKey);
+  if (el) el.addEventListener('change', () => patchSettings({ [boolKey]: el.checked }, true));
 }
 $('toggle-enabled').addEventListener('change', () => patchSettings({ enabled: $('toggle-enabled').checked }, true));
 $('disable').addEventListener('click', () => patchSettings({ enabled: false }, true));
@@ -621,10 +678,21 @@ $('media-input').addEventListener('change', event => {
   });
 });
 
+window.addEventListener('keydown', e => {
+  if (mode !== 'drawer' || window.parent === window) return;
+  const isW = e.code === 'KeyW' || (typeof e.key === 'string' && e.key.toLowerCase() === 'w');
+  if (isW && e.altKey && !e.shiftKey && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    window.parent.postMessage({ type: 'agy-glass-drawer-toggle' }, '*');
+  } else if (e.key === 'Escape') {
+    window.parent.postMessage({ type: 'agy-glass-drawer-close' }, '*');
+  }
+}, true);
+
 window.addEventListener('message', event => {
   if (event.data?.type === 'agy-glass-pet-patch' && event.data.patch && typeof event.data.patch === 'object') {
     const allowed = {};
-    for (const k of ['petY', 'petEnabled', 'paused', 'theme']) {
+    for (const k of ['petY', 'petEnabled', 'entryMode', 'paused', 'theme', 'hostZhUi', 'dynamicAccent']) {
       if (Object.hasOwn(event.data.patch, k)) allowed[k] = event.data.patch[k];
     }
     if (Object.keys(allowed).length && loaded) patchSettings(allowed, true);

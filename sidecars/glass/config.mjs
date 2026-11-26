@@ -6,11 +6,15 @@ export const ALLOWED_FITS = Object.freeze(['cover', 'contain', 'center', 'stretc
 export const ALLOWED_LANGUAGES = Object.freeze(['auto', 'zh-CN', 'en']);
 export const ALLOWED_PERF_MODES = Object.freeze(['eco', 'balanced', 'ultra']);
 export const ALLOWED_FPS_LIMITS = Object.freeze([30, 45, 60]);
+export const ALLOWED_ENTRY_MODES = Object.freeze(['pet', 'pill', 'hotkey']);
 
 export const DEFAULTS = Object.freeze({
   enabled: false,
   language: 'auto',
   theme: 'midnight',
+  // Host UI localization & dynamic wallpaper accent
+  hostZhUi: false,
+  dynamicAccent: false,
   // Performance
   performanceMode: 'balanced',
   fpsLimit: 30,
@@ -41,7 +45,8 @@ export const DEFAULTS = Object.freeze({
   volume: 0,
   pauseWhenHidden: true,
   pointerParallax: true,
-  // Catgirl desktop pet
+  // Quick entry & catgirl desktop pet
+  entryMode: 'pet',
   petEnabled: true,
   petSize: 92,
   petY: 46,
@@ -68,7 +73,7 @@ const intRanges = {
   petY: [10, 86],
 };
 
-const boolKeys = new Set(['enabled', 'paused', 'flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled']);
+const boolKeys = new Set(['enabled', 'paused', 'flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled', 'hostZhUi', 'dynamicAccent']);
 const LEGACY_IGNORED_KEYS = new Set(['activePlaylistId', 'autoRotate', 'rotateMinutes']);
 
 export function migrateSavedSettings(input) {
@@ -77,6 +82,9 @@ export function migrateSavedSettings(input) {
   for (const [key, value] of Object.entries(input)) {
     if (LEGACY_IGNORED_KEYS.has(key)) continue;
     cleaned[key] = key === 'theme' && value === 'cyan' ? 'midnight' : value;
+  }
+  if (cleaned.entryMode === undefined && cleaned.petEnabled === false) {
+    cleaned.entryMode = 'hotkey';
   }
   return validateSettings(cleaned);
 }
@@ -97,6 +105,8 @@ export function validateSettings(input, previous = DEFAULTS) {
       if (!ALLOWED_PERF_MODES.includes(value)) throw new Error('性能档位无效');
     } else if (key === 'fpsLimit') {
       if (!Number.isInteger(value) || !ALLOWED_FPS_LIMITS.includes(value)) throw new Error('帧率上限无效');
+    } else if (key === 'entryMode') {
+      if (!ALLOWED_ENTRY_MODES.includes(value)) throw new Error('快捷入口形态无效');
     } else if (key === 'playbackRate') {
       if (typeof value !== 'number' || !ALLOWED_RATES.includes(value)) throw new Error('播放倍速无效');
     } else if (key === 'fit') {
@@ -113,6 +123,11 @@ export function validateSettings(input, previous = DEFAULTS) {
       throw new Error('未知设置项');
     }
     next[key] = value;
+  }
+  if (Object.hasOwn(input, 'entryMode') && !Object.hasOwn(input, 'petEnabled')) {
+    next.petEnabled = next.entryMode === 'pet';
+  } else if (Object.hasOwn(input, 'petEnabled') && !Object.hasOwn(input, 'entryMode')) {
+    next.entryMode = next.petEnabled ? 'pet' : 'hotkey';
   }
   return next;
 }

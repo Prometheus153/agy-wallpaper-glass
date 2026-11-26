@@ -1,4 +1,4 @@
-# AGY Wallpaper Glass (`agy-wallpaper-glass`) v1.2.0
+# AGY Wallpaper Glass (`agy-wallpaper-glass`) v1.3.0
 
 <p align="center">
   <a href="./README.md">English</a> | <strong>简体中文</strong>
@@ -12,6 +12,12 @@
 
 ## 核心特性
 
+- **内置「Antigravity 界面汉化」一键开关 + 兼容外部汉化（`v1.3.0` 新增）**
+  - 在「样式」页或右键快捷菜单即可一键开关 Antigravity 主界面汉化（覆盖顶栏、左侧导航、输入框提示、概览/审阅菜单与设置弹窗）。不改 `app.asar`、软件更新不掉汉化、Windows & macOS 通用；已含中文自动跳过不与外部汉化包打架；严禁触碰聊天正文、代码块和终端输出；关闭开关即刻无损还原英文原文。
+- **32×32 壁纸动态取色 / 莫奈取色（`v1.3.0` 新增）**
+  - 开启「莫奈动态取色」后，切换任意场景、内置、视频或图片壁纸都会在毫秒内完成 `32×32` 采样，按深浅主题自适应联动玻璃底染、边框高光、强调色与光标色，并在面板实时展示 3 枚色板圆点与色值。
+- **`Ctrl+Alt+W`（macOS `⌘+⌥+W`）全局快捷浮窗 + 3 种入口形态（`v1.3.0` 新增）**
+  - 在 Antigravity 任意位置按 **`Ctrl+Alt+W`**（macOS 按 **`⌘+⌥+W`**）随时呼出/收起悬浮控制面板（`Esc` 关闭），入口形态可在 **「猫娘桌宠 / 极简胶囊 / 仅快捷键」** 间自由切换。
 - **Windows & macOS 双端开箱即用（`v1.2.0` 完整适配 macOS）**
   - **深度适配 Apple Silicon（M1/M2/M3/M4）与 Intel Mac**：内置免 `PATH` 依赖的 macOS Sidecar 启动器（`launch-mac.sh`，即使从访达/程序坞启动 Antigravity 也能精准定位 Homebrew `/opt/homebrew/bin/node`、官方包、`nvm`、`fnm`、`volta`、`mise`、`asdf` 中的 Node 22+）；接入原生 **访达（Finder）文件夹选择器**、支持 `~/` 路径展开与 macOS `Control+单击` 桌宠交互；附带一键安装菜单 **`install-mac.command`**、免终端快捷启动器 **`Antigravity (Glass).app`** 生成与 **`scripts/doctor.mjs`** 一键自检工具。
 - **全格式本地壁纸 + 6 套自带动态壁纸（离线内置 WebWallGL 引擎）**
@@ -50,7 +56,7 @@
 仓库与发布包已完整内置离线 MIT 开源 WebWallGL 引擎（`sidecars/glass/vendor/webwallgl.global.min.js`）、6 套原创动态壁纸与猫娘桌宠素材，不含任何作者个人路径。
 
 ### 方式一：macOS 一键安装（推荐）
-1. 前往 [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) 下载 **`agy-wallpaper-glass-v1.2.0-macos.zip`**（或双端通用包 `agy-wallpaper-glass-v1.2.0.zip`）并解压。
+1. 前往 [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) 下载 **`agy-wallpaper-glass-v1.3.0-macos.zip`**（或双端通用包 `agy-wallpaper-glass-v1.3.0.zip`）并解压。
 2. 打开「终端（Terminal）」进入解压后的文件夹，运行以下一行命令（可绕过 macOS Gatekeeper 未知开发者弹窗）：
    ```bash
    bash install-mac.command
@@ -60,7 +66,7 @@
 4. 随时可输入 **`4`**（或运行 `node scripts/doctor.mjs`）一键检查安装、Node、调试端口和壁纸库状态。
 
 ### 方式二：Windows 一键安装（推荐）
-1. 前往 [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) 下载 **`agy-wallpaper-glass-v1.2.0.zip`** 并解压。
+1. 前往 [Releases](https://github.com/Prometheus153/agy-wallpaper-glass/releases) 下载 **`agy-wallpaper-glass-v1.3.0.zip`** 并解压。
 2. 双击文件夹里的 **`install.bat`**：
    - 输入 `1`：首次安装到 `~/.gemini/config/plugins/agy-wallpaper-glass`
    - 输入 `2`：覆盖更新 / 从旧版 `agy-glass` 无损迁移（自动备份旧插件并完整保留原有设置与已导入壁纸）

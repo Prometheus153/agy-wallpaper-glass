@@ -5,9 +5,15 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   const SEAM_RATIO = 0.9413;
   const DRAWER_W = 336;
   const THEMES = ['midnight', 'frost', 'ember'];
+  const ENTRY_MODES = ['pet', 'pill', 'hotkey'];
   const getLang = () => (typeof resolveLanguage === 'function' ? resolveLanguage(settings?.language) : 'zh-CN');
   const L = (key, vars) => (typeof tr === 'function' ? tr(getLang(), key, vars) : key);
   const themeLabel = t => L(t === 'frost' ? 'themeFrost' : t === 'ember' ? 'themeEmber' : 'themeMidnight');
+  const entryLabel = m => L(m === 'pill' ? 'entryPill' : m === 'hotkey' ? 'entryHotkey' : 'entryPet');
+  const resolveEntryMode = s => {
+    if (ENTRY_MODES.includes(s?.entryMode)) return s.entryMode;
+    return s?.petEnabled === false ? 'hotkey' : 'pet';
+  };
 
   let settings = getSettings();
   let disposed = false;
@@ -68,6 +74,16 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   hit.title = L('petTitle');
   root.append(canvas, hit);
   document.body.append(root);
+
+  // Minimal Liquid Glass floating pill entry (for entryMode === 'pill')
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.id = 'agy-glass-pill-root';
+  pill.hidden = true;
+  pill.textContent = '✦';
+  pill.setAttribute('aria-label', L('pillAria'));
+  pill.title = L('pillTitle');
+  document.body.append(pill);
 
   // Right-click mini glass context menu
   const menu = document.createElement('div');
@@ -155,6 +171,14 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     hit.style.top = `${d.padT + Math.round(d.bodyH * 0.06)}px`;
     hit.style.width = `${Math.round(d.bodyW * 0.82)}px`;
     hit.style.height = `${Math.round(d.bodyH * 0.90)}px`;
+    const pillSize = 36;
+    const pillMinY = 56;
+    const pillMaxY = Math.max(pillMinY, vh - pillSize - 56);
+    const pillRatio = Math.max(0, Math.min(1, ((settings?.petY ?? 46) - 10) / 76));
+    const pillTop = dragging ? Math.max(pillMinY, Math.min(pillMaxY, currentTop)) : Math.round(pillMinY + pillRatio * (pillMaxY - pillMinY));
+    pill.style.left = `${Math.max(8, Math.round(anchorX - pillSize - 10))}px`;
+    pill.style.top = `${pillTop}px`;
+    pill.classList.toggle('dragging', dragging || instant);
     if (drawerHost) {
       drawerHost.style.width = `${drawerW}px`;
       drawerHost.style.left = `${Math.round(rect.right - 8 - drawerW)}px`;
@@ -174,7 +198,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     const vh = globalThis.innerHeight || 800;
     const overlays = document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], [data-testid*="settings-modal"], [data-testid*="settings-dialog"]');
     for (const el of overlays) {
-      if (!el || el === root || el === menu || el === drawerHost) continue;
+      if (!el || el === root || el === pill || el === menu || el === drawerHost) continue;
       if (el.hidden || el.getAttribute?.('aria-hidden') === 'true') continue;
       const r = el.getBoundingClientRect?.();
       if (!r || r.width < 120 || r.height < 100) continue;
@@ -192,6 +216,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     if (nextObscured === obscured) return;
     obscured = nextObscured;
     root.classList.toggle('obscured', obscured);
+    pill.classList.toggle('obscured', obscured);
     drawerHost?.classList.toggle('obscured', obscured);
     if (obscured) {
       hovered = false;
@@ -218,11 +243,14 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   function showMenu(clientX, clientY) {
     menu.replaceChildren();
     const nextTheme = THEMES[(THEMES.indexOf(settings?.theme) + 1) % THEMES.length];
+    const curEntry = resolveEntryMode(settings);
+    const nextEntry = ENTRY_MODES[(ENTRY_MODES.indexOf(curEntry) + 1) % ENTRY_MODES.length];
     const items = [
       ...(drawerHost ? [{ label: L(drawerOpen ? 'petMenuClose' : 'petMenuOpen'), run: () => setDrawerOpen(!drawerOpen) }] : []),
       { label: L(settings?.paused ? 'petMenuResume' : 'petMenuPause'), run: () => dispatchPatch({ paused: !settings?.paused }) },
       { label: L('petMenuTheme', { theme: themeLabel(nextTheme) }), run: () => dispatchPatch({ theme: nextTheme }) },
-      { label: L('petMenuHide'), run: () => { setDrawerOpen(false); dispatchPatch({ petEnabled: false }); } },
+      { label: L(settings?.hostZhUi ? 'petMenuZhOff' : 'petMenuZhOn'), run: () => dispatchPatch({ hostZhUi: !settings?.hostZhUi }) },
+      { label: L('petMenuEntry', { mode: entryLabel(nextEntry) }), run: () => dispatchPatch({ entryMode: nextEntry, petEnabled: nextEntry === 'pet' }) },
     ];
     for (const item of items) {
       const btn = document.createElement('button');
@@ -235,7 +263,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     menu.hidden = false;
     const vw = globalThis.innerWidth || 1280;
     const vh = globalThis.innerHeight || 800;
-    const mw = 152, mh = items.length * 32 + 12;
+    const mw = 176, mh = items.length * 32 + 12;
     menu.style.left = `${Math.max(8, Math.min(vw - mw - 8, clientX - mw - 8))}px`;
     menu.style.top = `${Math.max(8, Math.min(vh - mh - 8, clientY - 12))}px`;
   }
@@ -446,10 +474,82 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDrawerOpen(!drawerOpen); }
     else if (e.key === 'Escape') { hideMenu(); if (drawerOpen) setDrawerOpen(false); }
   }
+  function isToggleHotkey(e) {
+    if (!e || !e.altKey || e.shiftKey) return false;
+    const isW = e.code === 'KeyW' || (typeof e.key === 'string' && e.key.toLowerCase() === 'w');
+    return Boolean(isW && (e.ctrlKey || e.metaKey));
+  }
+  function onGlobalKeyDown(e) {
+    if (disposed || !settings?.enabled) return;
+    if (isToggleHotkey(e)) {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      hideMenu();
+      setDrawerOpen(!drawerOpen);
+      return;
+    }
+    if (e.key === 'Escape' && drawerOpen) {
+      hideMenu();
+      setDrawerOpen(false);
+    }
+  }
+  function onWindowMessage(e) {
+    if (disposed || !drawerUrl) return;
+    try { if (e.origin && e.origin !== new URL(drawerUrl).origin) return; } catch {}
+    if (e.data?.type === 'agy-glass-drawer-toggle') {
+      hideMenu();
+      setDrawerOpen(!drawerOpen);
+    } else if (e.data?.type === 'agy-glass-drawer-close' && drawerOpen) {
+      hideMenu();
+      setDrawerOpen(false);
+    }
+  }
   function onDocPointerDown(e) {
     if (!menu.hidden && !menu.contains?.(e.target)) hideMenu();
   }
   function onWindowResize() { layout(true); }
+
+  function onPillPointerDown(e) {
+    if (e.button !== 0 || e.ctrlKey) return;
+    hideMenu();
+    pointerDown = true;
+    dragging = false;
+    dragMoved = false;
+    dragStartY = e.clientY;
+    dragStartTop = Number.parseFloat(pill.style.top) || currentTop;
+    try { pill.setPointerCapture?.(e.pointerId); } catch {}
+  }
+  function onPillPointerMove(e) {
+    if (!pointerDown) return;
+    const dy = e.clientY - dragStartY;
+    if (!dragging && Math.abs(dy) > 5) {
+      dragging = true;
+      dragMoved = true;
+      pill.classList.add('dragging');
+    }
+    if (!dragging) return;
+    const vh = globalThis.innerHeight || 800;
+    const minY = 56;
+    const maxY = Math.max(minY, vh - 36 - 56);
+    currentTop = Math.max(minY, Math.min(maxY, Math.round(dragStartTop + dy)));
+    pill.style.top = `${currentTop}px`;
+  }
+  function onPillPointerUp(e) {
+    if (!pointerDown) return;
+    pointerDown = false;
+    try { pill.releasePointerCapture?.(e.pointerId); } catch {}
+    if (dragging) {
+      dragging = false;
+      pill.classList.remove('dragging');
+      const vh = globalThis.innerHeight || 800;
+      const minY = 56;
+      const maxY = Math.max(minY + 1, vh - 36 - 56);
+      const petY = Math.max(10, Math.min(86, Math.round(10 + ((currentTop - minY) / (maxY - minY)) * 76)));
+      dispatchPatch({ petY });
+    } else if (!dragMoved) {
+      setDrawerOpen(!drawerOpen);
+    }
+  }
 
   hit.addEventListener('pointerdown', onPointerDown);
   hit.addEventListener('pointermove', onPointerMove);
@@ -459,7 +559,15 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   hit.addEventListener('mouseleave', onMouseLeave);
   hit.addEventListener('contextmenu', onContextMenu);
   hit.addEventListener('keydown', onKeyDown);
+  pill.addEventListener('pointerdown', onPillPointerDown);
+  pill.addEventListener('pointermove', onPillPointerMove);
+  pill.addEventListener('pointerup', onPillPointerUp);
+  pill.addEventListener('pointercancel', onPillPointerUp);
+  pill.addEventListener('contextmenu', onContextMenu);
+  pill.addEventListener('keydown', onKeyDown);
   document.addEventListener('pointerdown', onDocPointerDown);
+  globalThis.addEventListener?.('keydown', onGlobalKeyDown, true);
+  globalThis.addEventListener?.('message', onWindowMessage);
   globalThis.addEventListener?.('resize', onWindowResize, { passive: true });
 
   // Track chat pane right border live whenever Review / Files / Terminal / Split pane opens or resizes!
@@ -494,14 +602,19 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     settings = nextSettings;
     hit.setAttribute('aria-label', L('petAria'));
     hit.title = L('petTitle');
+    pill.setAttribute('aria-label', L('pillAria'));
+    pill.title = L('pillTitle');
     if (closeBtn) closeBtn.title = L('petCloseDrawer');
     if (drawerFrame) drawerFrame.title = L('petFrameTitle');
-    const visible = Boolean(settings?.enabled && settings?.petEnabled !== false);
-    root.hidden = !visible;
-    if (!visible) {
+    const mode = resolveEntryMode(settings);
+    const active = Boolean(settings?.enabled);
+    root.hidden = !(active && mode === 'pet');
+    pill.hidden = !(active && mode === 'pill');
+    if (!active) {
       hideMenu();
       if (drawerOpen) setDrawerOpen(false);
     } else {
+      if (mode === 'hotkey') hideMenu();
       bindPaneObserver();
       layout(false);
     }
@@ -515,8 +628,11 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     ro?.disconnect();
     mo?.disconnect();
     document.removeEventListener('pointerdown', onDocPointerDown);
+    globalThis.removeEventListener?.('keydown', onGlobalKeyDown, true);
+    globalThis.removeEventListener?.('message', onWindowMessage);
     globalThis.removeEventListener?.('resize', onWindowResize);
     menu.remove();
+    pill.remove();
     root.remove();
     drawerHost?.remove();
   }
@@ -526,5 +642,5 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   if (typeof globalThis.requestAnimationFrame === 'function') {
     rafId = globalThis.requestAnimationFrame(renderFrame);
   }
-  return { update, dispose, setDrawerOpen };
+  return { update, dispose, setDrawerOpen, isDrawerOpen: () => drawerOpen };
 }

@@ -46,6 +46,11 @@ export function installGlass(payload) {
   let disposed = false;
   let lastPointerSent = 0;
   let pet = null;
+  let localizer = null;
+  let monetKey = '';
+  let monetPalette = null;
+  let monetSeq = 0;
+  let lastNext = null;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
   const palettes = {
@@ -158,15 +163,26 @@ export function installGlass(payload) {
     return { mounted: !disposed, mediaError };
   }
 
-  function update(next) {
-    if (disposed) return { mounted: false };
-    if (!next.settings.enabled) { dispose(); return { mounted: false }; }
-    settings = next.settings;
-    sceneProps = next.sceneProperties && typeof next.sceneProperties === 'object' ? next.sceneProperties : {};
-    leaseMs = next.leaseMs || leaseMs;
+  function blendRgb(baseStr, tintStr, weight = 0.34) {
+    const a = baseStr.split(/\s+/).map(Number);
+    const b = tintStr.split(/\s+/).map(Number);
+    if (a.length !== 3 || b.length !== 3 || b.some(n => !Number.isFinite(n))) return baseStr;
+    return [0, 1, 2].map(i => Math.round(a[i] * (1 - weight) + b[i] * weight)).join(' ');
+  }
 
-    const p = palettes[settings.theme] || palettes.midnight;
+  function renderStyles(next) {
+    if (disposed || !settings || !next) return;
+    const base = palettes[settings.theme] || palettes.midnight;
     const isLight = settings.theme === 'frost';
+    const mp = settings.dynamicAccent && monetPalette ? monetPalette : null;
+    const p = mp ? {
+      ...base,
+      rgb: blendRgb(base.rgb, mp.glassRgb, isLight ? 0.36 : 0.42),
+      scrimRgb: blendRgb(base.scrimRgb, mp.scrimRgb, 0.4),
+      accent: mp.accentHex,
+      specular: mp.specularRgb || base.specular,
+    } : base;
+    const activeCaret = mp ? mp.accentHex : settings.caret;
     const scope = 'html[data-agy-glass]';
     const op = (settings.opacity ?? 58) / 100;
     const opEff = isLight ? Math.max(op, 0.72) : op;
@@ -237,7 +253,7 @@ ${scope} .agy-glass-backdrop > iframe.agy-glass-player-frame { position: absolut
 ${scope} .agy-glass-scrim { position: absolute; inset: 0; background: rgb(${p.scrimRgb} / ${scrimAlpha}); }
 ${scope} .agy-shell { font-family: ${font}; font-size: ${settings.fontSize}px; color: ${p.text}; }
 ${scope} :is([data-testid="conversation-view"], [data-testid="agent-input-box"]) :is(p,textarea,[contenteditable="true"]) { font-family: ${font}; font-size: ${settings.fontSize}px; }
-${scope} :is(input,textarea,[contenteditable="true"]) { caret-color: ${settings.caret}; }
+${scope} :is(input,textarea,[contenteditable="true"]) { caret-color: ${activeCaret}; }
 ${scope} .bg-sidebar:has([data-testid="sidebar-navigation-items"]) { background: ${glassGrad} !important; color: ${p.text} !important; backdrop-filter: blur(${blurPx}px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(${blurPx}px) saturate(${glassSat}%); border-right: 1px solid ${line}; box-shadow: inset -1px 0 0 ${specularTop}, 6px 0 24px rgba(0,0,0,${isLight ? '0.08' : '0.16'}); }
 ${scope} [data-testid="title-menu-bar"] { background: linear-gradient(180deg, rgb(${p.rgb} / ${Math.min(0.75, opEff * 0.88).toFixed(2)}), rgb(${p.rgb} / ${Math.min(0.35, opEff * 0.4).toFixed(2)})) !important; color: ${p.text} !important; backdrop-filter: blur(${Math.max(6, Math.round(blurPx * 0.65))}px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(${Math.max(6, Math.round(blurPx * 0.65))}px) saturate(${glassSat}%); border-bottom: 1px solid rgb(${p.specular} / ${(borderAlpha * 0.45).toFixed(2)}); }
 ${scope} :is(button,[role="button"]) { --background: ${isLight ? '#f8fafc' : '#0f172a'} !important; }
@@ -276,6 +292,11 @@ ${scope} #agy-glass-pet-root.dragging { transition: none !important; }
 ${scope} #agy-glass-pet-root[hidden] { display: none !important; }
 ${scope} #agy-glass-pet-root.obscured { z-index: 0 !important; opacity: 0 !important; }
 ${scope} #agy-glass-pet-root.obscured #agy-glass-pet-hit { pointer-events: none !important; }
+${scope} #agy-glass-pill-root { position: fixed; z-index: 25; width: 36px; height: 36px; border-radius: 999px; border: 1px solid ${line}; background: ${dialogBg}; color: ${p.accent}; font-size: 16px; line-height: 1; display: grid; place-items: center; cursor: pointer; touch-action: none; user-select: none; backdrop-filter: blur(20px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(20px) saturate(${glassSat}%); box-shadow: ${specularInner}, 0 8px 22px rgba(0,0,0,${isLight ? '0.14' : '0.36'}); transition: left 0.24s cubic-bezier(0.22, 1, 0.36, 1), top 0.2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.16s ease, opacity 0.18s ease; }
+${scope} #agy-glass-pill-root:hover { transform: scale(1.08); border-color: ${p.accent}; }
+${scope} #agy-glass-pill-root.dragging { transition: none !important; cursor: grabbing; }
+${scope} #agy-glass-pill-root[hidden] { display: none !important; }
+${scope} #agy-glass-pill-root.obscured { z-index: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 ${scope} #agy-glass-pet-canvas { width: 100%; height: 100%; display: block; pointer-events: none; }
 ${scope} #agy-glass-pet-hit { position: absolute; pointer-events: auto; cursor: pointer; touch-action: none; border-radius: 42% 14% 26% 44% / 28% 12% 24% 38%; outline: none; }
 ${scope} #agy-glass-pet-root.dragging #agy-glass-pet-hit { cursor: grabbing; }
@@ -294,6 +315,44 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
 `;
 
     setOverlay({ color: '#00000000', symbolColor: p.text });
+  }
+
+  function refreshMonet(next) {
+    if (!settings?.dynamicAccent) {
+      const had = Boolean(monetPalette);
+      monetKey = '';
+      monetPalette = null;
+      if (had) renderStyles(next);
+      return;
+    }
+    const thumbSrc = next.mediaThumbUrl || next.media?.thumbUrl
+      || (next.media?.kind === 'image' ? (next.media?.dataUrl || next.media?.url) : '') || '';
+    const key = `${settings.theme}|${thumbSrc || next.media?.url || ''}`;
+    if (key === monetKey) return;
+    monetKey = key;
+    monetPalette = null;
+    const seq = ++monetSeq;
+    if (thumbSrc && typeof sampleMonetFromImageUrl === 'function') {
+      void sampleMonetFromImageUrl(thumbSrc, { theme: settings.theme }).then(result => {
+        if (disposed || seq !== monetSeq || !settings?.dynamicAccent) return;
+        monetPalette = result;
+        renderStyles(lastNext || next);
+      });
+    } else if (mediaElement?.tagName === 'VIDEO' && mediaElement.readyState >= 2 && typeof sampleMonetFromSource === 'function') {
+      monetPalette = sampleMonetFromSource(mediaElement, { theme: settings.theme });
+      renderStyles(next);
+    }
+  }
+
+  function update(next) {
+    if (disposed) return { mounted: false };
+    if (!next.settings.enabled) { dispose(); return { mounted: false }; }
+    lastNext = next;
+    settings = next.settings;
+    sceneProps = next.sceneProperties && typeof next.sceneProperties === 'object' ? next.sceneProperties : {};
+    leaseMs = next.leaseMs || leaseMs;
+
+    renderStyles(next);
 
     const source = next.media?.url || next.media?.dataUrl || null;
     const kind = next.media?.kind || null;
@@ -317,12 +376,19 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
           backdrop.append(mediaElement);
         } else {
           mediaElement = document.createElement(kind === 'video' ? 'video' : 'img');
+          mediaElement.crossOrigin = 'anonymous';
           if (mediaElement.tagName === 'VIDEO') {
             mediaElement.muted = true;
             mediaElement.loop = true;
             mediaElement.playsInline = true;
             mediaElement.preload = 'auto';
-            mediaElement.addEventListener('loadeddata', syncPlayback);
+            mediaElement.addEventListener('loadeddata', () => {
+              syncPlayback();
+              if (!disposed && settings?.dynamicAccent && !monetPalette && typeof sampleMonetFromSource === 'function') {
+                monetPalette = sampleMonetFromSource(mediaElement, { theme: settings.theme });
+                if (monetPalette) renderStyles(lastNext || next);
+              }
+            });
           } else {
             mediaElement.alt = '';
           }
@@ -342,14 +408,24 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
       }
     }
 
+    refreshMonet(next);
     syncPlayback();
-    if (!pet && typeof createCatPet === 'function' && next.petAssets) {
+
+    if (typeof createHostLocalizer === 'function') {
+      if (!localizer) localizer = createHostLocalizer();
+      localizer.setEnabled(Boolean(settings.hostZhUi));
+    }
+
+    if (!pet && typeof createCatPet === 'function' && (next.petAssets || next.drawerUrl)) {
       pet = createCatPet({
         getSettings: () => settings,
         assets: next.petAssets,
         drawerUrl: next.drawerUrl || '',
         isPreview: payload.owner === 'agy-glass-preview',
-        onPatch: patch => { settings = { ...settings, ...patch }; },
+        onPatch: patch => {
+          settings = { ...settings, ...patch };
+          if (Object.hasOwn(patch, 'hostZhUi')) localizer?.setEnabled(Boolean(settings.hostZhUi));
+        },
       });
     } else {
       pet?.update(settings);
@@ -361,6 +437,8 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
     if (disposed) return;
     disposed = true;
     clearInterval(watchdog);
+    localizer?.dispose();
+    localizer = null;
     pet?.dispose();
     pet = null;
     document.removeEventListener('visibilitychange', syncPlayback);

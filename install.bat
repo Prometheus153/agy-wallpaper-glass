@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title AGY Wallpaper Glass v1.2.0 Installer
+title AGY Wallpaper Glass v1.3.0 Installer
 cd /d "%~dp0"
 
 where node >nul 2>nul
@@ -11,7 +11,7 @@ if errorlevel 1 (
 )
 
 echo ==============================================================
-echo   AGY Wallpaper Glass v1.2.0 (agy-wallpaper-glass)
+echo   AGY Wallpaper Glass v1.3.0 (agy-wallpaper-glass)
 echo   Antigravity Liquid Glass + Wallpaper Engine (EN / 中文)
 echo ==============================================================
 echo.

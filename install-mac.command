@@ -1,5 +1,5 @@
 #!/bin/bash
-# AGY Wallpaper Glass v1.2.0 — macOS One-Click Installer & Launcher
+# AGY Wallpaper Glass v1.3.0 — macOS One-Click Installer & Launcher
 set -u
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -139,7 +139,7 @@ fi
 NODE_VER=$("$NODE_BIN" -v)
 
 echo "=============================================================="
-echo "  AGY Wallpaper Glass v1.2.0 (macOS Installer)"
+echo "  AGY Wallpaper Glass v1.3.0 (macOS Installer)"
 echo "  Antigravity Liquid Glass + Wallpaper Engine (EN / 中文)"
 echo "  Node: $NODE_VER ($NODE_BIN)"
 echo "=============================================================="
