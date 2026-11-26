@@ -104,6 +104,10 @@ const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'PRE', 'CODE', 'SVG', 
 const SKIP_SELECTOR = [
   '[data-testid="conversation-view"]',
   '[data-testid="user-message-bubble"]',
+  '[data-testid="model-selector-panel"]',
+  '[data-testid="model-selector-trigger"]',
+  '[data-testid="orchestrator-picker-row"]',
+  '.ces-ag-section', '.ces-inline', '.ces-root', '.ces-set', '[data-ces-part]',
   'pre', 'code', '.monaco-editor', '.monaco-diff-editor', '.cm-editor', '.xterm',
   '[contenteditable="true"]',
   '#agy-glass-pet-root', '#agy-glass-pill-root', '#agy-glass-drawer-host',
@@ -186,6 +190,11 @@ function isInsideSkipped(node) {
       el.id === 'agy-glass-wallpaper' ||
       el.getAttribute?.('data-testid') === 'conversation-view' ||
       el.getAttribute?.('data-testid') === 'user-message-bubble' ||
+      el.getAttribute?.('data-testid') === 'model-selector-panel' ||
+      el.getAttribute?.('data-testid') === 'model-selector-trigger' ||
+      el.getAttribute?.('data-testid') === 'orchestrator-picker-row' ||
+      el.getAttribute?.('data-ces-part') !== null ||
+      /\bces-(?:ag-section|inline|root|set)\b/.test(String(el.className || '')) ||
       el.getAttribute?.('contenteditable') === 'true'
     ) {
       return true;

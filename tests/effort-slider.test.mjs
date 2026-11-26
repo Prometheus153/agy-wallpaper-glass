@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { DEFAULTS, migrateSavedSettings } from '../sidecars/glass/config.mjs';
 import { installGlass } from '../sidecars/glass/runtime.mjs';
+import { createHostLocalizer, setExternalHostDict } from '../sidecars/glass/zh-ui.mjs';
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VENDOR_DIR = join(REPO_ROOT, 'sidecars', 'glass', 'vendor');
@@ -143,4 +144,49 @@ test('Creative tab stays blank and config cleanly migrates any previously saved 
   });
   assert.equal(migrated.enabled, true);
   assert.equal(Object.hasOwn(migrated, 'effortSliderEnabled'), false);
+});
+
+test('zh-ui skips model-selector and effort-slider nodes to prevent Medium/中等 ping-pong flicker', () => {
+  setExternalHostDict({ Medium: '中等', High: '高', Low: '低', 'New Conversation': '新建对话' });
+  const makeEl = (tag, attrs = {}, children = []) => {
+    const el = {
+      nodeType: 1,
+      tagName: tag.toUpperCase(),
+      id: attrs.id || '',
+      className: attrs.class || '',
+      attrs: new Map(Object.entries(attrs)),
+      childNodes: [],
+      parentElement: null,
+      parentNode: null,
+      getAttribute(k) { return this.attrs.has(k) ? this.attrs.get(k) : null; },
+      setAttribute(k, v) { this.attrs.set(k, String(v)); },
+    };
+    for (const c of children) {
+      c.parentElement = el;
+      c.parentNode = el;
+      el.childNodes.push(c);
+    }
+    return el;
+  };
+  const txt = v => ({ nodeType: 3, nodeValue: v, parentElement: null, parentNode: null });
+
+  const sidebarTxt = txt('New Conversation');
+  const sliderVal = txt('Medium');
+  const triggerVal = txt('High');
+  const panelVal = txt('Low');
+
+  const root = makeEl('body', {}, [
+    makeEl('div', {}, [sidebarTxt]),
+    makeEl('div', { class: 'ces-ag-section' }, [makeEl('span', { 'data-ces-part': 'value' }, [sliderVal])]),
+    makeEl('button', { 'data-testid': 'model-selector-trigger' }, [makeEl('span', {}, [triggerVal])]),
+    makeEl('div', { 'data-testid': 'model-selector-panel' }, [makeEl('span', {}, [panelVal])]),
+  ]);
+
+  const loc = createHostLocalizer({ root });
+  loc.setEnabled(true);
+  assert.equal(sidebarTxt.nodeValue, '新建对话', 'normal host UI still translates');
+  assert.equal(sliderVal.nodeValue, 'Medium', 'effort slider value must stay untouched');
+  assert.equal(triggerVal.nodeValue, 'High', 'model selector trigger must stay untouched');
+  assert.equal(panelVal.nodeValue, 'Low', 'model selector panel must stay untouched');
+  loc.dispose();
 });
