@@ -1,45 +1,26 @@
 // Non-invasive Antigravity Desktop UI Chinese localization module.
-// Strictly skips conversation content, code blocks, editors, terminals, and already-localized CJK text.
+// Combines core UI entries + MIT-licensed antigravity-zh-plugin v1.7.0 full dictionary (lazy-loaded over loopback)
+// and dynamic quota/time patterns. Strictly skips chats, code blocks, editors, terminals, and existing CJK text.
 
 export const HOST_ZH_EXACT = Object.freeze({
-  // Top menu bar
   'Workspace': '工作区',
   'View': '视图',
   'Window': '窗口',
   'File': '文件',
   'Edit': '编辑',
   'Help': '帮助',
-
-  // Left sidebar navigation & sections
   'New Conversation': '新建对话',
   'Automations': '自动化',
   'Customizations': '自定义',
   'Projects': '项目',
   'Conversations': '对话',
+  'Not in Project': '未归入项目',
   'Ungrouped': '未分组',
   'Ungrouped Projects': '未分组项目',
   'Settings': '设置',
+  'Application': '应用设置',
   'Give Feedback': '反馈建议',
-  'Search': '搜索',
-  'Archived': '已归档',
-  'Pinned': '已置顶',
-  'Starred': '已星标',
-  'History': '历史记录',
-
-  // Composer & input bar
   'Ask anything, @ to mention, / for actions': '输入任何问题，使用 @ 提及，使用 / 执行操作',
-  'Queued messages': '排队消息',
-  'Queue': '排队',
-  'Send immediately': '立即发送',
-  'Send message': '发送消息',
-  'Send': '发送',
-  'Speak': '语音输入',
-  'Stop': '停止',
-  'Cancel': '取消',
-  'Planning': '规划',
-  'Fast': '极速',
-
-  // Overview / split panes / toolbars
   'Overview': '概览',
   'Review': '审阅',
   'Files': '文件',
@@ -49,21 +30,6 @@ export const HOST_ZH_EXACT = Object.freeze({
   'Background Tasks': '后台任务',
   'Artifacts': '产物',
   'Implementation Plan': '实现计划',
-  'Task': '任务',
-  'Walkthrough': '演练总结',
-  'Changes': '更改',
-  'No changes': '暂无更改',
-  'Explorer': '资源管理器',
-  'Browser': '浏览器',
-  'Open': '打开',
-  'Copy': '复制',
-  'Copied': '已复制',
-  'Reject': '拒绝',
-  'Accept': '接受',
-  'Proceed': '继续执行',
-  'Approve': '批准',
-
-  // Settings sidebar & tabs
   'General': '常规',
   'Apps': '应用',
   'Appearance': '外观',
@@ -71,17 +37,27 @@ export const HOST_ZH_EXACT = Object.freeze({
   'Keybindings': '快捷键',
   'Notifications': '通知',
   'Models': '模型',
-  'Account': '账号',
-  'MCP Servers': 'MCP 服务器',
-  'Skills': '技能',
-  'Rules': '规则',
-  'Workflows': '工作流',
-  'Hooks': '钩子',
-  'Installed': '已安装',
-  'Marketplace': '应用市场',
-  'Manage': '管理',
-
-  // Settings content headings & controls
+  'Browser': '浏览器',
+  'Models & Usage': '模型与用量',
+  'Manage your model quota and credits.': '管理您的模型配额与额度。',
+  'Plan': '套餐方案',
+  'Upgrade': '升级',
+  'Your plan: Google AI Pro': '您的套餐：Google AI Pro',
+  'Your plan: Google AI Ultra': '您的套餐：Google AI Ultra',
+  'You can upgrade to a Google AI Ultra plan to receive higher rate limits.': '您可以升级至 Google AI Ultra 套餐以获得更高的速率配额。',
+  'Model Credits': '模型额度',
+  'Enable AI credit overages': '启用 AI 额度超额使用',
+  "When toggled on, Antigravity will use your AI credits to fulfill model requests once you're out of model quota. Antigravity will always use your model quota first before using AI credits.": '开启后，当模型配额用尽时，Antigravity 将使用您的 AI 额度继续处理请求。系统始终优先消耗模型配额，再使用 AI 额度。',
+  'Orchestrator Settings': '编排器设置',
+  'Choose the models Orchestrator uses. A larger, smarter orchestrator model with a faster, cheaper executor gives high quality for fewer tokens.': '选择编排器使用的模型。更强更聪明的编排模型搭配更快更省的执行模型，能以更少的 Token 获得更高质量。',
+  'Orchestrator Model': '编排模型',
+  'Plans the work, makes design decisions, and reviews the result. Pick a top-tier model. You can also pick one per conversation from the Orchestrator row in the model menu.': '负责规划任务、制定设计决策并审阅结果，建议选择顶级模型；也可以在模型菜单的编排器行里为每个对话单独指定。',
+  'Executor Model': '执行模型',
+  'Carries out the plan: searches, edits, builds, and tests. Pick a faster, cheaper model.': '负责执行计划：搜索、编辑、构建和测试，建议选择速度更快、消耗更低的模型。',
+  'Gemini Models': 'Gemini 模型',
+  'Claude and GPT models': 'Claude 与 GPT 模型',
+  'Weekly Limit Remaining': '每周剩余额度',
+  'Five Hour Limit Remaining': '5 小时剩余额度',
   'Interface Layout': '界面布局',
   'Knowledge Work': '知识工作',
   'Software Engineering': '软件工程',
@@ -90,49 +66,38 @@ export const HOST_ZH_EXACT = Object.freeze({
   'Remote': '远程',
   'Advanced': '高级',
   'Input Box': '输入框',
+  'Queued messages': '排队消息',
+  'Send message': '发送消息',
   'Voice mode': '语音模式',
   'Voice': '语音',
   'Microphone': '麦克风',
   'System default': '系统默认',
   'Not set': '未设置',
   'Change': '更改',
-  'Theme': '主题',
-  'Dark': '深色',
-  'Light': '浅色',
-  'System': '跟随系统',
-  'Language': '语言',
-  'Close': '关闭',
-  'Save': '保存',
-  'Reset': '重置',
-  'Delete': '删除',
-  'Remove': '移除',
-  'Uninstall': '卸载',
-  'Install': '安装',
-  'Update': '更新',
-  'Enable': '启用',
-  'Disable': '停用',
-  'Enabled': '已启用',
-  'Disabled': '已停用',
-  'Refresh': '刷新',
-  'Sign in': '登录',
-  'Sign out': '退出登录',
-  'Learn more.': '了解更多。',
-  'Learn more': '了解更多',
-  'Keyboard shortcut': '键盘快捷键',
-  'Keyboard shortcuts': '键盘快捷键',
-
-  // Settings descriptions
-  'Configure agent execution, queued messages, and permissions.': '配置智能体执行、排队消息发送以及权限。',
-  'Simplified interface for research, writing, and everyday tasks.': '面向研究、写作与日常任务的精简界面。',
-  'Full interface for coding, developer tools, and managing agents.': '面向编程、开发工具与多智能体管理的完整界面。',
-  'Configure what the agent can do in local and remote conversations.': '配置智能体在本地和远程对话中的可执行权限。',
-  'Controls what the agent can do in local conversations.': '控制智能体在本地对话中的可执行权限。',
-  'Controls what the agent can do in remote conversations.': '控制智能体在远程对话中的可执行权限。',
-  'Choose which key sends a message in the chat composer.': '选择在聊天输入框中发送消息的按键。',
-  'The voice used in Voice mode. Powered by Gemini Live.': '语音模式下使用的声线，由 Gemini Live 驱动。',
-  'Input device for voice mode and dictation.': '用于语音模式与听写的输入设备。',
-  'Configure when queued messages are sent.': '配置排队消息的发送时机。',
 });
+
+function localizeDuration(str) {
+  return String(str || '')
+    .replace(/(\d+)\s*days?\s*,\s*(\d+)\s*hours?/gi, '$1 天 $2 小时')
+    .replace(/(\d+)\s*hours?\s*,\s*(\d+)\s*minutes?/gi, '$1 小时 $2 分钟')
+    .replace(/(\d+)\s*minutes?\s*,\s*(\d+)\s*seconds?/gi, '$1 分 $2 秒')
+    .replace(/(\d+)\s*days?/gi, '$1 天')
+    .replace(/(\d+)\s*hours?/gi, '$1 小时')
+    .replace(/(\d+)\s*minutes?/gi, '$1 分钟')
+    .replace(/(\d+)\s*seconds?/gi, '$1 秒');
+}
+
+const HOST_ZH_PATTERNS = [
+  [/^Your plan:\s*(.+)$/i, (_, plan) => `您的套餐：${plan}`],
+  [/^You have used some of your weekly limit,?\s*it will fully refresh in\s*(.+?)\.?$/i, (_, dur) => `您已使用部分每周额度，将在 ${localizeDuration(dur)}后完全刷新。`],
+  [/^You have used some of your 5-?hour limit,?\s*it will fully refresh in\s*(.+?)\.?$/i, (_, dur) => `您已使用部分 5 小时额度，将在 ${localizeDuration(dur)}后完全刷新。`],
+  [/^Resets? in\s*(.+?)\.?$/i, (_, dur) => `${localizeDuration(dur)}后重置`],
+  [/^Refreshes? in\s*(.+?)\.?$/i, (_, dur) => `${localizeDuration(dur)}后刷新`],
+  [/^(\d+)\s*(?:minutes?|mins?)\s+ago$/i, '$1 分钟前'],
+  [/^(\d+)\s*(?:hours?|hrs?)\s+ago$/i, '$1 小时前'],
+  [/^(\d+)\s*days?\s+ago$/i, '$1 天前'],
+  [/^(\d+)\s+files?\s+changed$/i, '$1 个文件已更改'],
+];
 
 const CJK_RE = /[\u4e00-\u9fff]/;
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'PRE', 'CODE', 'SVG', 'CANVAS', 'VIDEO', 'IMG', 'IFRAME']);
@@ -146,16 +111,67 @@ const SKIP_SELECTOR = [
 ].join(', ');
 const TRANSLATABLE_ATTRS = ['placeholder', 'aria-label', 'title'];
 
+let externalExact = null;
+let externalLower = null;
+let externalLoading = null;
+
+export function setExternalHostDict(dict) {
+  if (!dict || typeof dict !== 'object') return;
+  externalExact = dict;
+  externalLower = new Map();
+  for (const [k, v] of Object.entries(dict)) {
+    if (typeof v !== 'string' || !v) continue;
+    const lk = k.trim().toLowerCase();
+    if (lk && !externalLower.has(lk)) externalLower.set(lk, v);
+  }
+}
+
+export function loadExternalHostDict(url) {
+  if (!url || typeof fetch !== 'function') return Promise.resolve(false);
+  if (externalExact) return Promise.resolve(true);
+  if (externalLoading) return externalLoading;
+  externalLoading = fetch(url)
+    .then(r => (r.ok ? r.json() : null))
+    .then(data => {
+      if (data && typeof data === 'object') { setExternalHostDict(data); return true; }
+      return false;
+    })
+    .catch(() => false)
+    .finally(() => { externalLoading = null; });
+  return externalLoading;
+}
+
+function lookupDict(trimmed) {
+  if (Object.hasOwn(HOST_ZH_EXACT, trimmed)) return HOST_ZH_EXACT[trimmed];
+  if (externalExact && Object.hasOwn(externalExact, trimmed)) return externalExact[trimmed];
+  const lower = trimmed.toLowerCase();
+  if (externalLower?.has(lower)) return externalLower.get(lower);
+  const punc = /([:：.。?？!！…]|\.\.\.)$/.exec(trimmed);
+  if (punc) {
+    const core = trimmed.slice(0, -punc[0].length).trim();
+    const hit = Object.hasOwn(HOST_ZH_EXACT, core)
+      ? HOST_ZH_EXACT[core]
+      : (externalExact && Object.hasOwn(externalExact, core) ? externalExact[core] : externalLower?.get(core.toLowerCase()));
+    if (hit) {
+      const zhPunc = punc[0] === ':' ? '：' : punc[0] === '.' ? '。' : punc[0] === '?' ? '？' : punc[0] === '!' ? '！' : punc[0];
+      return hit.endsWith(zhPunc) ? hit : `${hit}${zhPunc}`;
+    }
+  }
+  for (const [re, repl] of HOST_ZH_PATTERNS) {
+    if (re.test(trimmed)) return trimmed.replace(re, repl);
+  }
+  return null;
+}
+
 export function translateHostText(raw) {
   if (typeof raw !== 'string' || !raw) return null;
   if (CJK_RE.test(raw)) return null; // Never double-translate external Chinese packs
   const trimmed = raw.trim();
-  if (!trimmed || trimmed.length > 160) return null;
-  const hit = Object.hasOwn(HOST_ZH_EXACT, trimmed) ? HOST_ZH_EXACT[trimmed] : null;
-  if (!hit) return null;
-  const lead = raw.slice(0, raw.indexOf(trimmed));
-  const tail = raw.slice(raw.indexOf(trimmed) + trimmed.length);
-  return `${lead}${hit}${tail}`;
+  if (!trimmed || trimmed.length > 480) return null;
+  const hit = lookupDict(trimmed);
+  if (!hit || hit === trimmed) return null;
+  const idx = raw.indexOf(trimmed);
+  return `${raw.slice(0, idx)}${hit}${raw.slice(idx + trimmed.length)}`;
 }
 
 function isInsideSkipped(node) {
@@ -179,10 +195,11 @@ function isInsideSkipped(node) {
   return false;
 }
 
-export function createHostLocalizer({ root = typeof document !== 'undefined' ? document.body : null } = {}) {
+export function createHostLocalizer({ root = typeof document !== 'undefined' ? document.body : null, dictUrl = '' } = {}) {
   let enabled = false;
   let observer = null;
   let timer = 0;
+  let currentDictUrl = dictUrl;
   const pendingRoots = new Set();
   const origText = new Map();
   const origAttrs = new Map();
@@ -273,13 +290,22 @@ export function createHostLocalizer({ root = typeof document !== 'undefined' ? d
     observer = null;
   }
 
-  function setEnabled(next) {
+  function setEnabled(next, nextDictUrl = '') {
+    if (nextDictUrl) currentDictUrl = nextDictUrl;
     const want = Boolean(next);
-    if (want === enabled) return;
+    if (want === enabled) {
+      if (enabled && currentDictUrl && !externalExact) {
+        void loadExternalHostDict(currentDictUrl).then(ok => { if (ok && enabled && root) localizeElement(root); });
+      }
+      return;
+    }
     enabled = want;
     if (enabled) {
       if (root) localizeElement(root);
       startObserver();
+      if (currentDictUrl && !externalExact) {
+        void loadExternalHostDict(currentDictUrl).then(ok => { if (ok && enabled && root) localizeElement(root); });
+      }
     } else {
       stopObserver();
       restoreAll();

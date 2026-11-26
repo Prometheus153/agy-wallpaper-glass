@@ -5,6 +5,7 @@ window.addEventListener('message', event => {
   const payload = event.data.payload;
   installGlass({
     ...payload,
+    zhDictUrl: './assets/zh-dict.json',
     mediaThumbUrl: payload.media?.thumbUrl || null,
     petAssets: { open: './assets/pet-open.webp', wink: './assets/pet-wink.webp', tail: './assets/pet-tail.webp' },
     settings: { ...payload.settings, enabled: true },

@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { DEFAULTS, migrateSavedSettings, validateSettings } from '../sidecars/glass/config.mjs';
-import { createHostLocalizer, translateHostText } from '../sidecars/glass/zh-ui.mjs';
+import { createHostLocalizer, setExternalHostDict, translateHostText } from '../sidecars/glass/zh-ui.mjs';
 import { extractPaletteFromRgba } from '../sidecars/glass/monet.mjs';
 import { createCatPet } from '../sidecars/glass/pet.mjs';
+
+const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
 function makeFakeNode(tag, attrs = {}, children = []) {
   const listeners = new Map();
@@ -61,7 +66,7 @@ function makeText(val) {
   return { nodeType: 3, nodeValue: val, parentElement: null, parentNode: null };
 }
 
-test('config validates hostZhUi, dynamicAccent, entryMode and migrates legacy petEnabled', () => {
+test('config validates hostZhUi, dynamicAccent, pet/pill entryMode and migrates legacy hotkey/petEnabled', () => {
   assert.equal(DEFAULTS.hostZhUi, false);
   assert.equal(DEFAULTS.dynamicAccent, false);
   assert.equal(DEFAULTS.entryMode, 'pet');
@@ -72,34 +77,51 @@ test('config validates hostZhUi, dynamicAccent, entryMode and migrates legacy pe
   assert.equal(s1.entryMode, 'pill');
   assert.equal(s1.petEnabled, false);
 
-  const s2 = validateSettings({ entryMode: 'hotkey' });
-  assert.equal(s2.entryMode, 'hotkey');
-  assert.equal(s2.petEnabled, false);
+  const migratedLegacy = migrateSavedSettings({ enabled: true, petEnabled: false });
+  assert.equal(migratedLegacy.entryMode, 'pill');
+  assert.equal(migratedLegacy.petEnabled, false);
 
-  const migrated = migrateSavedSettings({ enabled: true, petEnabled: false });
-  assert.equal(migrated.entryMode, 'hotkey');
-  assert.equal(migrated.petEnabled, false);
+  const migratedHotkey = migrateSavedSettings({ enabled: true, entryMode: 'hotkey' });
+  assert.equal(migratedHotkey.entryMode, 'pill');
 
+  assert.throws(() => validateSettings({ entryMode: 'hotkey' }), /快捷入口形态无效/);
   assert.throws(() => validateSettings({ entryMode: 'invalid' }), /快捷入口形态无效/);
   assert.throws(() => validateSettings({ hostZhUi: 'yes' }), /开关值无效/);
   assert.throws(() => validateSettings({ dynamicAccent: 1 }), /开关值无效/);
 });
 
-test('zh-ui translates Antigravity chrome losslessly, skips chats/code, and coexists with external CJK', () => {
-  assert.equal(translateHostText('New Conversation'), '新建对话');
-  assert.equal(translateHostText('  Settings  '), '  设置  ');
+test('zh-ui loads full MIT zh-dict.json, translates Models & Usage + quota timers, skips chats/code, and restores losslessly', async () => {
+  const fullDict = JSON.parse(await readFile(join(REPO_ROOT, 'sidecars', 'glass', 'vendor', 'zh-dict.json'), 'utf8'));
+  assert.ok(Object.keys(fullDict).length > 5000, 'bundled MIT dictionary should have >5000 entries');
+  setExternalHostDict(fullDict);
+
+  assert.equal(translateHostText('Application'), '应用设置');
+  assert.equal(translateHostText('Not in Project'), '未归入项目');
+  assert.equal(translateHostText('Models & Usage'), '模型与用量');
+  assert.equal(translateHostText('Orchestrator Settings'), '编排器设置');
+  assert.equal(translateHostText('Weekly Limit Remaining'), '每周剩余额度');
+  assert.equal(translateHostText('Five Hour Limit Remaining'), '5 小时剩余额度');
+  assert.equal(translateHostText('Enable AI credit overages'), '启用 AI 额度超额使用');
+  assert.equal(translateHostText('Your plan: Google AI Pro'), '您的套餐：Google AI Pro');
+  assert.equal(
+    translateHostText('You have used some of your weekly limit, it will fully refresh in 5 days, 3 hours.'),
+    '您已使用部分每周额度，将在 5 天 3 小时后完全刷新。',
+  );
+  assert.equal(
+    translateHostText('You have used some of your 5-hour limit, it will fully refresh in 4 hours, 19 minutes.'),
+    '您已使用部分 5 小时额度，将在 4 小时 19 分钟后完全刷新。',
+  );
   assert.equal(translateHostText('新建对话'), null); // already Chinese -> untouched
-  assert.equal(translateHostText('Random User Chat'), null);
 
   const sidebarText = makeText('New Conversation');
-  const settingsText = makeText('Settings');
+  const appText = makeText('Application');
   const externalZhText = makeText('已由外部汉化');
-  const chatProse = makeText('Settings'); // inside conversation-view -> MUST NOT translate!
+  const chatProse = makeText('Models & Usage'); // inside conversation-view -> MUST NOT translate!
   const codeText = makeText('Terminal'); // inside <code> -> MUST NOT translate!
 
   const sidebar = makeFakeNode('aside', {}, [
     makeFakeNode('div', {}, [sidebarText]),
-    makeFakeNode('div', {}, [settingsText]),
+    makeFakeNode('div', {}, [appText]),
     makeFakeNode('div', {}, [externalZhText]),
   ]);
   const input = makeFakeNode('textarea', { placeholder: 'Ask anything, @ to mention, / for actions' });
@@ -113,17 +135,15 @@ test('zh-ui translates Antigravity chrome losslessly, skips chats/code, and coex
   loc.setEnabled(true);
 
   assert.equal(sidebarText.nodeValue, '新建对话');
-  assert.equal(settingsText.nodeValue, '设置');
+  assert.equal(appText.nodeValue, '应用设置');
   assert.equal(externalZhText.nodeValue, '已由外部汉化');
   assert.equal(input.getAttribute('placeholder'), '输入任何问题，使用 @ 提及，使用 / 执行操作');
-  // Strict privacy & code protection
-  assert.equal(chatProse.nodeValue, 'Settings');
+  assert.equal(chatProse.nodeValue, 'Models & Usage');
   assert.equal(codeText.nodeValue, 'Terminal');
 
-  // Toggle OFF restores 100% original English losslessly
   loc.setEnabled(false);
   assert.equal(sidebarText.nodeValue, 'New Conversation');
-  assert.equal(settingsText.nodeValue, 'Settings');
+  assert.equal(appText.nodeValue, 'Application');
   assert.equal(input.getAttribute('placeholder'), 'Ask anything, @ to mention, / for actions');
   loc.dispose();
 });
@@ -155,20 +175,21 @@ test('monet 32x32 extractor outputs valid theme-adapted palettes for warm, cool,
   assert.match(mono.accentHex, /^#[0-9a-f]{6}$/);
 });
 
-test('pet entry modes (pet / pill / hotkey) and global Ctrl+Alt+W & macOS Cmd+Opt+KeyW hotkeys', () => {
+test('pet/pill entry modes, safe drawer top below toolbar, trimmed right-click menu, and Ctrl+Alt+W / Cmd+Opt+KeyW hotkeys', () => {
   const origDoc = globalThis.document;
   const origAdd = globalThis.addEventListener;
   const origRem = globalThis.removeEventListener;
   const winListeners = new Map();
 
   const body = makeFakeNode('body');
+  const fakeToolbar = { getBoundingClientRect: () => ({ left: 950, top: 44, right: 1030, bottom: 80, width: 80, height: 36 }) };
   globalThis.document = {
     body,
     createElement: tag => makeFakeNode(tag),
     addEventListener: () => {},
     removeEventListener: () => {},
     querySelector: () => null,
-    querySelectorAll: () => [],
+    querySelectorAll: sel => (sel.includes('pane-titlebar-toolbar') ? [fakeToolbar] : []),
   };
   globalThis.addEventListener = (t, fn) => {
     if (!winListeners.has(t)) winListeners.set(t, []);
@@ -191,40 +212,36 @@ test('pet entry modes (pet / pill / hotkey) and global Ctrl+Alt+W & macOS Cmd+Op
     const petEl = body.childNodes.find(n => n.id === 'agy-glass-pet-root');
     const pillEl = body.childNodes.find(n => n.id === 'agy-glass-pill-root');
     const drawerEl = body.childNodes.find(n => n.id === 'agy-glass-drawer-host');
-    assert.ok(petEl && pillEl && drawerEl);
+    const menuEl = body.childNodes.find(n => n.id === 'agy-glass-pet-menu');
+    const hitEl = petEl.childNodes.find(n => n.id === 'agy-glass-pet-hit');
+    assert.ok(petEl && pillEl && drawerEl && menuEl && hitEl);
 
-    // pet mode
+    // Drawer clears top-right toolbar (bottom 80 -> top >= 88px)
+    assert.ok(Number.parseInt(drawerEl.style.top, 10) >= 88, `drawer top should clear toolbar, got ${drawerEl.style.top}`);
+
+    // Right-click menu has ONLY 3 items (no theme switch, no zh toggle)
+    hitEl.dispatch('contextmenu', { preventDefault() {}, stopPropagation() {}, clientX: 800, clientY: 400 });
+    assert.equal(menuEl.hidden, false);
+    assert.equal(menuEl.childNodes.length, 3);
+    const labels = menuEl.childNodes.map(b => b.textContent);
+    assert.ok(labels.every(l => !/主题|Theme|汉化|Chinese/i.test(l)));
+
+    // pet mode -> pill mode
     assert.equal(petEl.hidden, false);
     assert.equal(pillEl.hidden, true);
-
-    // pill mode
     curSettings = { ...curSettings, entryMode: 'pill', petEnabled: false };
     inst.update(curSettings);
     assert.equal(petEl.hidden, true);
     assert.equal(pillEl.hidden, false);
 
-    // hotkey-only mode: both hidden, yet Ctrl+Alt+W & macOS Cmd+Opt+KeyW still open/close drawer!
-    curSettings = { ...curSettings, entryMode: 'hotkey', petEnabled: false };
-    inst.update(curSettings);
-    assert.equal(petEl.hidden, true);
-    assert.equal(pillEl.hidden, true);
-    assert.equal(inst.isDrawerOpen(), false);
-
+    // Global hotkeys work in pill mode too (Windows Ctrl+Alt+W, Escape, macOS Cmd+Opt+KeyW with '∑')
     const fireKey = ev => { for (const fn of (winListeners.get('keydown') || [])) fn(ev); };
-    // Windows Ctrl+Alt+W opens drawer
     fireKey({ ctrlKey: true, altKey: true, metaKey: false, shiftKey: false, code: 'KeyW', key: 'w' });
     assert.equal(inst.isDrawerOpen(), true);
-    assert.equal(drawerEl.getAttribute('data-open'), 'true');
-
-    // Escape closes drawer
     fireKey({ key: 'Escape' });
     assert.equal(inst.isDrawerOpen(), false);
-
-    // macOS Cmd+Opt+W where Option+W produces '∑' in e.key still toggles drawer via e.code === 'KeyW'!
     fireKey({ ctrlKey: false, altKey: true, metaKey: true, shiftKey: false, code: 'KeyW', key: '∑' });
     assert.equal(inst.isDrawerOpen(), true);
-
-    // Iframe postMessage from inside drawer closes drawer cleanly
     for (const fn of (winListeners.get('message') || [])) {
       fn({ origin: 'http://127.0.0.1:47831', data: { type: 'agy-glass-drawer-toggle' } });
     }

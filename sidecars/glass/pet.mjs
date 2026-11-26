@@ -4,15 +4,13 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   const ASPECT = 493 / 320;
   const SEAM_RATIO = 0.9413;
   const DRAWER_W = 336;
-  const THEMES = ['midnight', 'frost', 'ember'];
-  const ENTRY_MODES = ['pet', 'pill', 'hotkey'];
+  const ENTRY_MODES = ['pet', 'pill'];
   const getLang = () => (typeof resolveLanguage === 'function' ? resolveLanguage(settings?.language) : 'zh-CN');
   const L = (key, vars) => (typeof tr === 'function' ? tr(getLang(), key, vars) : key);
-  const themeLabel = t => L(t === 'frost' ? 'themeFrost' : t === 'ember' ? 'themeEmber' : 'themeMidnight');
-  const entryLabel = m => L(m === 'pill' ? 'entryPill' : m === 'hotkey' ? 'entryHotkey' : 'entryPet');
+  const entryLabel = m => L(m === 'pill' ? 'entryPill' : 'entryPet');
   const resolveEntryMode = s => {
     if (ENTRY_MODES.includes(s?.entryMode)) return s.entryMode;
-    return s?.petEnabled === false ? 'hotkey' : 'pet';
+    return s?.petEnabled === false ? 'pill' : 'pet';
   };
 
   let settings = getSettings();
@@ -180,6 +178,17 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     pill.style.top = `${pillTop}px`;
     pill.classList.toggle('dragging', dragging || instant);
     if (drawerHost) {
+      let safeTop = 84;
+      if (typeof document.querySelectorAll === 'function') {
+        const bars = document.querySelectorAll('[data-testid="pane-titlebar-toolbar"], [data-testid="toggle-aux-sidebar"], [data-testid="toggle-overview-panel"]');
+        for (const el of bars) {
+          const r = el.getBoundingClientRect?.();
+          if (r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.bottom < 160) {
+            safeTop = Math.max(safeTop, Math.ceil(r.bottom + 8));
+          }
+        }
+      }
+      drawerHost.style.top = `${Math.min(136, safeTop)}px`;
       drawerHost.style.width = `${drawerW}px`;
       drawerHost.style.left = `${Math.round(rect.right - 8 - drawerW)}px`;
       drawerHost.setAttribute('data-open', String(drawerOpen));
@@ -242,14 +251,11 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
 
   function showMenu(clientX, clientY) {
     menu.replaceChildren();
-    const nextTheme = THEMES[(THEMES.indexOf(settings?.theme) + 1) % THEMES.length];
     const curEntry = resolveEntryMode(settings);
-    const nextEntry = ENTRY_MODES[(ENTRY_MODES.indexOf(curEntry) + 1) % ENTRY_MODES.length];
+    const nextEntry = curEntry === 'pet' ? 'pill' : 'pet';
     const items = [
       ...(drawerHost ? [{ label: L(drawerOpen ? 'petMenuClose' : 'petMenuOpen'), run: () => setDrawerOpen(!drawerOpen) }] : []),
       { label: L(settings?.paused ? 'petMenuResume' : 'petMenuPause'), run: () => dispatchPatch({ paused: !settings?.paused }) },
-      { label: L('petMenuTheme', { theme: themeLabel(nextTheme) }), run: () => dispatchPatch({ theme: nextTheme }) },
-      { label: L(settings?.hostZhUi ? 'petMenuZhOff' : 'petMenuZhOn'), run: () => dispatchPatch({ hostZhUi: !settings?.hostZhUi }) },
       { label: L('petMenuEntry', { mode: entryLabel(nextEntry) }), run: () => dispatchPatch({ entryMode: nextEntry, petEnabled: nextEntry === 'pet' }) },
     ];
     for (const item of items) {

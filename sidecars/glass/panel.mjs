@@ -301,7 +301,7 @@ function renderControls() {
   $('pointerParallax').checked = settings.pointerParallax;
   if ($('hostZhUi')) $('hostZhUi').checked = Boolean(settings.hostZhUi);
   if ($('dynamicAccent')) $('dynamicAccent').checked = Boolean(settings.dynamicAccent);
-  const entry = settings.entryMode || (settings.petEnabled === false ? 'hotkey' : 'pet');
+  const entry = settings.entryMode === 'pill' || settings.petEnabled === false ? 'pill' : 'pet';
   document.querySelectorAll('[data-entry]').forEach(btn => btn.classList.toggle('active', btn.dataset.entry === entry));
   if ($('pet-size-row')) $('pet-size-row').hidden = entry !== 'pet';
   $('toggle-enabled').checked = settings.enabled;
@@ -518,8 +518,9 @@ function switchTab(tab) {
     btn.classList.toggle('active', on);
     btn.setAttribute('aria-selected', String(on));
   });
-  for (const name of ['wallpaper', 'style']) {
+  for (const name of ['wallpaper', 'style', 'creative']) {
     const panel = $(`tab-${name}`);
+    if (!panel) continue;
     panel.hidden = name !== tab;
     panel.classList.toggle('active', name === tab);
   }

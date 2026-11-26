@@ -51,6 +51,7 @@
       <nav class="tab-bar" role="tablist" aria-label="Tabs">
         <button type="button" role="tab" class="tab-btn active" data-tab="wallpaper" data-i18n="tabWallpaper" aria-selected="true">壁纸</button>
         <button type="button" role="tab" class="tab-btn" data-tab="style" data-i18n="tabStyle" aria-selected="false">样式</button>
+        <button type="button" role="tab" class="tab-btn" data-tab="creative" data-i18n="tabCreative" aria-selected="false">创意</button>
       </nav>
 
       <div class="drawer-scroll" id="drawer-scroll">
@@ -101,6 +102,24 @@
 
         <!-- TAB 2: Style -->
         <section class="tab-panel" id="tab-style" role="tabpanel" hidden>
+          <div class="glass-card">
+            <div class="card-head"><h2 data-i18n="secPet">界面汉化与快捷入口</h2></div>
+            <div class="switch-row">
+              <span class="s-label" data-i18n="lblHostZhUi">Antigravity 界面汉化</span>
+              <label class="ios-switch"><input type="checkbox" id="hostZhUi" name="hostZhUi"><span class="ios-track"></span></label>
+            </div>
+            <p class="hint-note" data-i18n="hostZhHint">无损开关 · 兼容外部汉化 · 更新不丢 · 不触碰聊天正文</p>
+            <div class="seg-row">
+              <span class="s-label" data-i18n="lblEntryMode">入口形态</span>
+              <div class="seg-pills perf-pills" id="entry-group" role="group" aria-label="Entry Mode">
+                <button type="button" class="pill-opt active" data-entry="pet" data-i18n="entryPet">猫娘桌宠</button>
+                <button type="button" class="pill-opt" data-entry="pill" data-i18n="entryPill">极简胶囊</button>
+              </div>
+            </div>
+            <p class="hint-note" id="hotkey-hint">随时按 Ctrl+Alt+W 呼出/收起浮窗（Esc 关闭）</p>
+            <label class="slider-row" id="pet-size-row"><span class="s-label" data-i18n="lblPetSize">桌宠大小</span><input id="petSize" name="petSize" type="range" min="60" max="140" value="92"><output id="petSize-value" class="val-pill">92px</output></label>
+          </div>
+
           <div class="glass-card">
             <div class="card-head"><h2 data-i18n="secTheme">氛围主题</h2></div>
             <div class="theme-grid">
@@ -183,25 +202,6 @@
             </div>
           </div>
 
-          <div class="glass-card">
-            <div class="card-head"><h2 data-i18n="secPet">界面汉化与快捷入口</h2></div>
-            <div class="switch-row">
-              <span class="s-label" data-i18n="lblHostZhUi">Antigravity 界面汉化</span>
-              <label class="ios-switch"><input type="checkbox" id="hostZhUi" name="hostZhUi"><span class="ios-track"></span></label>
-            </div>
-            <p class="hint-note" data-i18n="hostZhHint">无损开关 · 兼容外部汉化 · 更新不丢 · 不触碰聊天正文</p>
-            <div class="seg-row">
-              <span class="s-label" data-i18n="lblEntryMode">入口形态</span>
-              <div class="seg-pills perf-pills" id="entry-group" role="group" aria-label="Entry Mode">
-                <button type="button" class="pill-opt active" data-entry="pet" data-i18n="entryPet">猫娘桌宠</button>
-                <button type="button" class="pill-opt" data-entry="pill" data-i18n="entryPill">极简胶囊</button>
-                <button type="button" class="pill-opt" data-entry="hotkey" data-i18n="entryHotkey">仅快捷键</button>
-              </div>
-            </div>
-            <p class="hint-note" id="hotkey-hint">随时按 Ctrl+Alt+W 呼出/收起浮窗（Esc 关闭）</p>
-            <label class="slider-row" id="pet-size-row"><span class="s-label" data-i18n="lblPetSize">桌宠大小</span><input id="petSize" name="petSize" type="range" min="60" max="140" value="92"><output id="petSize-value" class="val-pill">92px</output></label>
-          </div>
-
           <div class="glass-card" id="scene-props-section" hidden>
             <div class="card-head"><h2 data-i18n="secSceneProps">场景自定义属性</h2></div>
             <div id="scene-props-list" class="scene-props-list"></div>
@@ -267,6 +267,9 @@
             <p data-i18n="privacyDesc">内置离线 MIT 开源 WebWallGL 引擎，实时渲染本地 Scene/Web/Video/Image 壁纸。不改动 Antigravity 文件，不读取聊天，停用即还原。</p>
           </details>
         </section>
+
+        <!-- TAB 3: Creative (Blank Canvas) -->
+        <section class="tab-panel" id="tab-creative" role="tabpanel" hidden></section>
       </div>
 
       <footer class="drawer-footer">

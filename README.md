@@ -16,9 +16,9 @@ Inspired by `dsh-plugin-wallpaper-engine v1.4.0` and powered by the bundled MIT-
   - One-click **Antigravity Chinese UI** switch in the *Style* tab (and pet/pill right-click menu) translates menus, sidebar, composer chrome, Overview/Review panes, and Settings dialogs without touching `app.asar` — survives every Antigravity update, works on both Windows & macOS, skips already-Chinese text (coexists with external localization packs), never touches chat messages or code blocks, and restores English losslessly when turned off.
 - **32×32 Dynamic Wallpaper Monet Color Sampling (`v1.3.0`)**
   - Toggle **Monet Dynamic Color (32×32)** to automatically extract dominant hues from any Scene, Built-in, Video, or Image wallpaper in `< 1ms` and harmonize glass tint, specular borders, active highlights, and caret color across dark and light themes — with live 3-swatch preview in the panel.
-- **Global Quick-Drawer Hotkey & 3 Entry Modes (`v1.3.0`)**
+- **Global Quick-Drawer Hotkey & Entry Modes (`v1.3.0`)**
   - Press **`Ctrl+Alt+W`** (Windows/Linux) or **`⌘+⌥+W`** (macOS) anywhere inside Antigravity to summon or dismiss the floating Liquid Glass drawer (`Esc` to close).
-  - Switch freely between **Catgirl Pet**, **Minimal Glass Pill**, and **Hotkey Only** entry modes.
+  - Switch cleanly between **Catgirl Pet** and **Minimal Glass Pill** entry modes, plus a dedicated **Creative** tab ready for upcoming features.
 - **Cross-Platform Ready (Windows 10/11 & macOS Apple Silicon / Intel)**
   - **macOS First-Class Support (`v1.2.0`)**: GUI-PATH-safe Sidecar launcher (`launch-mac.sh` auto-detects Homebrew `/opt/homebrew/bin/node`, `/usr/local/bin/node`, `nvm`, `fnm`, `volta`, `mise`, `asdf`), native Finder folder picker (`osascript`), `~/` path expansion, `Control+Click` pet support, one-click **`install-mac.command`**, optional standalone **`Antigravity (Glass).app`** debug launcher, and built-in **`scripts/doctor.mjs`** environment checker.
 - **All Wallpaper Formats + 6 Built-in Animated Wallpapers (Offline WebWallGL Bundled)**
@@ -145,4 +145,5 @@ npm run pack:release # Build offline v1.2.0 universal + macOS ZIPs with Unix 075
 
 - Released under the [MIT License](./LICENSE).
 - Bundled offline Scene engine **[WebWallGL](https://github.com/oneincase/webwallgl)** is licensed under MIT (`sidecars/glass/vendor/webwallgl.LICENSE`).
+- Bundled offline Antigravity Chinese UI dictionary is adapted from MIT-licensed **[antigravity-zh-plugin](https://github.com/yunjuanyunshu114-byte/antigravity-zh-plugin)** (`sidecars/glass/vendor/antigravity-zh-plugin.LICENSE`).
 - Conceptually inspired by `dsh-plugin-wallpaper-engine`. Not affiliated with Google, Antigravity, DSH, or Wallpaper Engine.

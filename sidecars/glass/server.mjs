@@ -28,6 +28,7 @@ const BINARY_STATIC = new Map([
   ['/assets/pet-open.webp', ['assets/pet-open.webp', 'image/webp']],
   ['/assets/pet-wink.webp', ['assets/pet-wink.webp', 'image/webp']],
   ['/assets/pet-tail.webp', ['assets/pet-tail.webp', 'image/webp']],
+  ['/assets/zh-dict.json', ['vendor/zh-dict.json', 'application/json; charset=utf-8']],
 ]);
 
 const PANEL_CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'";
@@ -135,6 +136,7 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
     reloadNonce,
     sidecarPort: basePort(),
     drawerUrl: `http://127.0.0.1:${basePort()}/?drawer=${drawerKey}`,
+    zhDictUrl: `http://127.0.0.1:${basePort()}/assets/zh-dict.json`,
     mediaThumbUrl: activeMedia && (activeMedia.previewFile || activeMedia.kind === 'image')
       ? `http://127.0.0.1:${basePort()}/thumb/${mediaKey}`
       : null,

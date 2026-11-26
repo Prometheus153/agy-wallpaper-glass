@@ -299,8 +299,9 @@ ${scope} #agy-glass-pill-root[hidden] { display: none !important; }
 ${scope} #agy-glass-pill-root.obscured { z-index: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 ${scope} #agy-glass-pet-canvas { width: 100%; height: 100%; display: block; pointer-events: none; }
 ${scope} #agy-glass-pet-hit { position: absolute; pointer-events: auto; cursor: pointer; touch-action: none; border-radius: 42% 14% 26% 44% / 28% 12% 24% 38%; outline: none; }
+${scope} #agy-glass-pet-hit:focus:not(:focus-visible) { outline: none !important; box-shadow: none !important; }
 ${scope} #agy-glass-pet-root.dragging #agy-glass-pet-hit { cursor: grabbing; }
-${scope} #agy-glass-drawer-host { position: fixed; top: 44px; bottom: 14px; z-index: 24; border-radius: ${radiusPx}px; overflow: hidden; background: ${dialogBg}; backdrop-filter: blur(${Math.max(22, blurPx)}px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(${Math.max(22, blurPx)}px) saturate(${glassSat}%); border: 1px solid ${line}; box-shadow: ${specularInner}, 0 22px 60px rgba(0,0,0,0.44); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, left 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+${scope} #agy-glass-drawer-host { position: fixed; top: 84px; bottom: 14px; z-index: 24; border-radius: ${radiusPx}px; overflow: hidden; background: ${dialogBg}; backdrop-filter: blur(${Math.max(22, blurPx)}px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(${Math.max(22, blurPx)}px) saturate(${glassSat}%); border: 1px solid ${line}; box-shadow: ${specularInner}, 0 22px 60px rgba(0,0,0,0.44); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, left 0.24s cubic-bezier(0.22, 1, 0.36, 1), top 0.2s ease; }
 ${scope} #agy-glass-drawer-host[data-open="false"] { opacity: 0; pointer-events: none; transform: translateX(28px) scale(0.98); }
 ${scope} #agy-glass-drawer-host[data-open="true"] { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
 ${scope} #agy-glass-drawer-host.obscured { z-index: 0 !important; opacity: 0 !important; pointer-events: none !important; }
@@ -412,8 +413,8 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
     syncPlayback();
 
     if (typeof createHostLocalizer === 'function') {
-      if (!localizer) localizer = createHostLocalizer();
-      localizer.setEnabled(Boolean(settings.hostZhUi));
+      if (!localizer) localizer = createHostLocalizer({ dictUrl: next.zhDictUrl || '' });
+      localizer.setEnabled(Boolean(settings.hostZhUi), next.zhDictUrl || '');
     }
 
     if (!pet && typeof createCatPet === 'function' && (next.petAssets || next.drawerUrl)) {

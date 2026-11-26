@@ -6,7 +6,7 @@ export const ALLOWED_FITS = Object.freeze(['cover', 'contain', 'center', 'stretc
 export const ALLOWED_LANGUAGES = Object.freeze(['auto', 'zh-CN', 'en']);
 export const ALLOWED_PERF_MODES = Object.freeze(['eco', 'balanced', 'ultra']);
 export const ALLOWED_FPS_LIMITS = Object.freeze([30, 45, 60]);
-export const ALLOWED_ENTRY_MODES = Object.freeze(['pet', 'pill', 'hotkey']);
+export const ALLOWED_ENTRY_MODES = Object.freeze(['pet', 'pill']);
 
 export const DEFAULTS = Object.freeze({
   enabled: false,
@@ -83,8 +83,9 @@ export function migrateSavedSettings(input) {
     if (LEGACY_IGNORED_KEYS.has(key)) continue;
     cleaned[key] = key === 'theme' && value === 'cyan' ? 'midnight' : value;
   }
+  if (cleaned.entryMode === 'hotkey') cleaned.entryMode = 'pill';
   if (cleaned.entryMode === undefined && cleaned.petEnabled === false) {
-    cleaned.entryMode = 'hotkey';
+    cleaned.entryMode = 'pill';
   }
   return validateSettings(cleaned);
 }
@@ -127,7 +128,7 @@ export function validateSettings(input, previous = DEFAULTS) {
   if (Object.hasOwn(input, 'entryMode') && !Object.hasOwn(input, 'petEnabled')) {
     next.petEnabled = next.entryMode === 'pet';
   } else if (Object.hasOwn(input, 'petEnabled') && !Object.hasOwn(input, 'entryMode')) {
-    next.entryMode = next.petEnabled ? 'pet' : 'hotkey';
+    next.entryMode = next.petEnabled ? 'pet' : 'pill';
   }
   return next;
 }
