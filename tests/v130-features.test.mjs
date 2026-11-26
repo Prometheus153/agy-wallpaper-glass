@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { DEFAULTS, migrateSavedSettings, validateSettings } from '../sidecars/glass/config.mjs';
+import { I18N } from '../sidecars/glass/i18n.mjs';
 import { createHostLocalizer, setExternalHostDict, translateHostText } from '../sidecars/glass/zh-ui.mjs';
 import { extractPaletteFromRgba } from '../sidecars/glass/monet.mjs';
 import { createCatPet } from '../sidecars/glass/pet.mjs';
@@ -219,12 +220,17 @@ test('pet/pill entry modes, safe drawer top below toolbar, trimmed right-click m
     // Drawer clears top-right toolbar (bottom 80 -> top >= 88px)
     assert.ok(Number.parseInt(drawerEl.style.top, 10) >= 88, `drawer top should clear toolbar, got ${drawerEl.style.top}`);
 
-    // Right-click menu has ONLY 3 items (no theme switch, no zh toggle)
+    // Right-click menu has ONLY 3 items (no theme switch, no zh toggle) and uses playful pet/pill switch key
     hitEl.dispatch('contextmenu', { preventDefault() {}, stopPropagation() {}, clientX: 800, clientY: 400 });
     assert.equal(menuEl.hidden, false);
     assert.equal(menuEl.childNodes.length, 3);
     const labels = menuEl.childNodes.map(b => b.textContent);
     assert.ok(labels.every(l => !/主题|Theme|汉化|Chinese/i.test(l)));
+    assert.equal(labels[2], 'petMenuToPill');
+    assert.equal(I18N['zh-CN'].petMenuToPill, '让小猫先回窝躲会儿');
+    assert.equal(I18N['zh-CN'].petMenuToPet, '把小猫叫出来');
+    assert.equal(I18N.en.petMenuToPill, 'Send kitty back to nap');
+    assert.equal(I18N.en.petMenuToPet, 'Call kitty back out');
 
     // pet mode -> pill mode
     assert.equal(petEl.hidden, false);
@@ -252,5 +258,153 @@ test('pet/pill entry modes, safe drawer top below toolbar, trimmed right-click m
     globalThis.document = origDoc;
     globalThis.addEventListener = origAdd;
     globalThis.removeEventListener = origRem;
+  }
+});
+
+test('pet-sad.webp asset exists and pet->pill triggers 3-stage sad expression, border-clipped retreat, and parabolic pill toss', async () => {
+  const sadBuf = await readFile(join(REPO_ROOT, 'sidecars', 'glass', 'assets', 'pet-sad.webp'));
+  assert.equal(sadBuf.subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.equal(sadBuf.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.ok(sadBuf.length > 5000);
+
+  const origDoc = globalThis.document;
+  const origAdd = globalThis.addEventListener;
+  const origRem = globalThis.removeEventListener;
+  const origRaf = globalThis.requestAnimationFrame;
+  const origCancel = globalThis.cancelAnimationFrame;
+  const origImage = globalThis.Image;
+
+  const drawLog = [];
+  let borderClipCount = 0;
+  let lastScaleX = 1;
+  let lastTranslateX = 0;
+  const fakeCtx = {
+    setTransform() {},
+    clearRect() {},
+    save() {},
+    restore() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo() {},
+    closePath() {},
+    rect() { borderClipCount++; },
+    clip() {},
+    translate(x) { lastTranslateX = x; },
+    rotate() {},
+    transform() {},
+    scale(sx) { lastScaleX = sx; },
+    drawImage(img) { drawLog.push(img?.src || ''); },
+  };
+
+  let nextRafCb = null;
+  globalThis.requestAnimationFrame = cb => { nextRafCb = cb; return 1; };
+  globalThis.cancelAnimationFrame = () => { nextRafCb = null; };
+  globalThis.Image = class FakeImage {
+    set src(v) { this._src = v; this.naturalWidth = 320; this.naturalHeight = 493; this.onload?.(); }
+    get src() { return this._src; }
+  };
+
+  const body = makeFakeNode('body');
+  globalThis.document = {
+    body,
+    hidden: false,
+    createElement: tag => {
+      const node = makeFakeNode(tag);
+      if (tag === 'canvas') node.getContext = () => fakeCtx;
+      return node;
+    },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+  globalThis.addEventListener = () => {};
+  globalThis.removeEventListener = () => {};
+
+  const stepFrame = ts => {
+    const cb = nextRafCb;
+    nextRafCb = null;
+    if (cb) cb(ts);
+  };
+
+  try {
+    let curSettings = { ...DEFAULTS, enabled: true, entryMode: 'pet', petEnabled: true };
+    const inst = createCatPet({
+      getSettings: () => curSettings,
+      assets: {
+        open: '/assets/pet-open.webp',
+        wink: '/assets/pet-wink.webp',
+        sad: '/assets/pet-sad.webp',
+        tail: '/assets/pet-tail.webp',
+      },
+      drawerUrl: 'http://127.0.0.1:47831/?drawer=abc',
+      onPatch: p => { curSettings = { ...curSettings, ...p }; },
+    });
+
+    const petEl = body.childNodes.find(n => n.id === 'agy-glass-pet-root');
+    const pillEl = body.childNodes.find(n => n.id === 'agy-glass-pill-root');
+    const menuEl = body.childNodes.find(n => n.id === 'agy-glass-pet-menu');
+    const hitEl = petEl.childNodes.find(n => n.id === 'agy-glass-pet-hit');
+
+    // Open right-click menu and click "让小猫先回窝躲会儿"
+    hitEl.dispatch('contextmenu', { preventDefault() {}, stopPropagation() {}, clientX: 800, clientY: 400 });
+    menuEl.childNodes[2].dispatch('click');
+    assert.equal(curSettings.entryMode, 'pill');
+    assert.equal(petEl.hidden, false, 'catgirl stays visible for sad + retreat animation');
+    assert.equal(pillEl.hidden, true, 'pill waits until catgirl vanishes');
+
+    // Server echo update mid-animation must NOT cancel or snap-hide catgirl
+    inst.update(curSettings);
+    assert.equal(petEl.hidden, false);
+
+    // Stage 1 (t=100..400ms): draws sad expression sprite, pill still hidden
+    stepFrame(100);
+    stepFrame(400);
+    assert.equal(drawLog.at(-1), '/assets/pet-sad.webp');
+    assert.equal(pillEl.hidden, true);
+    const sadTranslateX = lastTranslateX;
+
+    // Stage 2 (t=900ms, elapsed=800ms): clipped behind border, turned sideways (scaleX < 0.8), moving right
+    borderClipCount = 0;
+    stepFrame(900);
+    assert.ok(borderClipCount > 0, 'body must clip behind right border during retreat');
+    assert.ok(lastScaleX < 0.8, `expected yaw turn scaleX < 0.8, got ${lastScaleX}`);
+    assert.ok(lastTranslateX > sadTranslateX, 'catgirl should move rightward into border');
+    assert.equal(pillEl.hidden, true);
+
+    // Stage 3 launch (t=1100ms, elapsed=1000ms): pill is tossed out as catgirl finishes vanishing!
+    stepFrame(1100);
+    assert.equal(pillEl.hidden, false);
+    assert.equal(pillEl.classList.contains('tossing'), true);
+    assert.match(pillEl.style.transform, /translate3d\(/);
+
+    // Catgirl fully vanishes behind border (t=1260ms, elapsed=1160ms), pill keeps flying
+    stepFrame(1260);
+    assert.equal(petEl.hidden, true);
+    assert.equal(pillEl.hidden, false);
+    assert.equal(pillEl.classList.contains('tossing'), true);
+
+    // Pill lands and settles cleanly (t=1720ms)
+    stepFrame(1720);
+    assert.equal(pillEl.hidden, false);
+    assert.equal(pillEl.classList.contains('tossing'), false);
+    assert.equal(pillEl.style.transform, '');
+
+    // Reverse switch: call kitty back out -> pill hides, pet shows and peeks in
+    curSettings = { ...curSettings, entryMode: 'pet', petEnabled: true };
+    inst.update(curSettings);
+    assert.equal(pillEl.hidden, true);
+    assert.equal(petEl.hidden, false);
+    stepFrame(1800);
+    assert.equal(drawLog.at(-1), '/assets/pet-wink.webp');
+
+    inst.dispose();
+  } finally {
+    globalThis.document = origDoc;
+    globalThis.addEventListener = origAdd;
+    globalThis.removeEventListener = origRem;
+    globalThis.requestAnimationFrame = origRaf;
+    globalThis.cancelAnimationFrame = origCancel;
+    globalThis.Image = origImage;
   }
 });

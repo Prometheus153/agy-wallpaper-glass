@@ -27,6 +27,7 @@ const STATIC = new Map([
 const BINARY_STATIC = new Map([
   ['/assets/pet-open.webp', ['assets/pet-open.webp', 'image/webp']],
   ['/assets/pet-wink.webp', ['assets/pet-wink.webp', 'image/webp']],
+  ['/assets/pet-sad.webp', ['assets/pet-sad.webp', 'image/webp']],
   ['/assets/pet-tail.webp', ['assets/pet-tail.webp', 'image/webp']],
   ['/assets/zh-dict.json', ['vendor/zh-dict.json', 'application/json; charset=utf-8']],
 ]);
@@ -143,6 +144,7 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
     petAssets: {
       open: `http://127.0.0.1:${basePort()}/assets/pet-open.webp`,
       wink: `http://127.0.0.1:${basePort()}/assets/pet-wink.webp`,
+      sad: `http://127.0.0.1:${basePort()}/assets/pet-sad.webp`,
       tail: `http://127.0.0.1:${basePort()}/assets/pet-tail.webp`,
     },
     settings: current.settings,

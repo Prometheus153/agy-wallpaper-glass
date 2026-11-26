@@ -292,9 +292,11 @@ ${scope} #agy-glass-pet-root.dragging { transition: none !important; }
 ${scope} #agy-glass-pet-root[hidden] { display: none !important; }
 ${scope} #agy-glass-pet-root.obscured { z-index: 0 !important; opacity: 0 !important; }
 ${scope} #agy-glass-pet-root.obscured #agy-glass-pet-hit { pointer-events: none !important; }
+${scope} #agy-glass-pet-root.leaving #agy-glass-pet-hit { pointer-events: none !important; }
 ${scope} #agy-glass-pill-root { position: fixed; z-index: 25; width: 36px; height: 36px; border-radius: 999px; border: 1px solid ${line}; background: ${dialogBg}; color: ${p.accent}; font-size: 16px; line-height: 1; display: grid; place-items: center; cursor: pointer; touch-action: none; user-select: none; backdrop-filter: blur(20px) saturate(${glassSat}%); -webkit-backdrop-filter: blur(20px) saturate(${glassSat}%); box-shadow: ${specularInner}, 0 8px 22px rgba(0,0,0,${isLight ? '0.14' : '0.36'}); transition: left 0.24s cubic-bezier(0.22, 1, 0.36, 1), top 0.2s cubic-bezier(0.22, 1, 0.36, 1), transform 0.16s ease, opacity 0.18s ease; }
 ${scope} #agy-glass-pill-root:hover { transform: scale(1.08); border-color: ${p.accent}; }
 ${scope} #agy-glass-pill-root.dragging { transition: none !important; cursor: grabbing; }
+${scope} #agy-glass-pill-root.tossing { transition: none !important; pointer-events: none !important; will-change: transform, opacity; }
 ${scope} #agy-glass-pill-root[hidden] { display: none !important; }
 ${scope} #agy-glass-pill-root.obscured { z-index: 0 !important; opacity: 0 !important; pointer-events: none !important; }
 ${scope} #agy-glass-pet-canvas { width: 100%; height: 100%; display: block; pointer-events: none; }

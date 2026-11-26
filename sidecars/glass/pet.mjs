@@ -7,13 +7,24 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   const ENTRY_MODES = ['pet', 'pill'];
   const getLang = () => (typeof resolveLanguage === 'function' ? resolveLanguage(settings?.language) : 'zh-CN');
   const L = (key, vars) => (typeof tr === 'function' ? tr(getLang(), key, vars) : key);
-  const entryLabel = m => L(m === 'pill' ? 'entryPill' : 'entryPet');
   const resolveEntryMode = s => {
     if (ENTRY_MODES.includes(s?.entryMode)) return s.entryMode;
     return s?.petEnabled === false ? 'pill' : 'pet';
   };
+  const isReducedMotion = () => Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+
+  const LEAVE_SAD_MS = 620;
+  const LEAVE_RETREAT_MS = 500;
+  const LEAVE_TOTAL_MS = LEAVE_SAD_MS + LEAVE_RETREAT_MS;
+  const PILL_LAUNCH_AT_MS = 980;
+  const PILL_TOSS_MS = 580;
+  const PEEK_IN_MS = 420;
 
   let settings = getSettings();
+  let lastEntryMode = resolveEntryMode(settings);
+  let leaveAnim = null;
+  let pillToss = null;
+  let peekInAnim = null;
   let disposed = false;
   let drawerOpen = false;
   let dragging = false;
@@ -92,9 +103,11 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   // Load transparent WebP images (gracefully guarded for minimal VM tests)
   const imgOpen = typeof Image === 'function' ? new Image() : null;
   const imgWink = typeof Image === 'function' ? new Image() : null;
+  const imgSad = typeof Image === 'function' ? new Image() : null;
   const imgTail = typeof Image === 'function' ? new Image() : null;
   let openReady = false;
   let winkReady = false;
+  let sadReady = false;
   let tailReady = false;
   if (imgOpen && assets?.open) {
     imgOpen.crossOrigin = 'anonymous';
@@ -105,6 +118,11 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     imgWink.crossOrigin = 'anonymous';
     imgWink.onload = () => { winkReady = true; };
     imgWink.src = assets.wink;
+  }
+  if (imgSad && assets?.sad) {
+    imgSad.crossOrigin = 'anonymous';
+    imgSad.onload = () => { sadReady = true; };
+    imgSad.src = assets.sad;
   }
   if (imgTail && assets?.tail) {
     imgTail.crossOrigin = 'anonymous';
@@ -249,6 +267,100 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
 
   function hideMenu() { menu.hidden = true; }
 
+  function canAnimateTransitions() {
+    return typeof globalThis.requestAnimationFrame === 'function' && !isReducedMotion();
+  }
+
+  function clearPillToss() {
+    pillToss = null;
+    pill.classList.remove('tossing');
+    pill.style.transform = '';
+    pill.style.opacity = '';
+  }
+
+  function cancelTransitions() {
+    leaveAnim = null;
+    peekInAnim = null;
+    root.classList.remove('leaving');
+    clearPillToss();
+  }
+
+  function updatePillToss(now) {
+    if (!pillToss) return;
+    if (pillToss.startedAt === null) pillToss.startedAt = now;
+    const t = Math.max(0, Math.min(1, (now - pillToss.startedAt) / PILL_TOSS_MS));
+    let dx = 0;
+    let dy = 0;
+    let rot = 0;
+    let sx = 1;
+    let sy = 1;
+    let op = 1;
+    if (t < 0.68) {
+      const p = t / 0.68;
+      dx = 42 * (1 - p) * (1 - p) - 10 * Math.pow(p, 1.4);
+      dy = -56 * Math.sin(p * Math.PI) + 12 * (1 - p);
+      rot = -320 * (1 - p) * (1 - 0.25 * p);
+      const sc = 0.25 + 0.88 * Math.min(1, p * 1.35);
+      sx = sc;
+      sy = sc;
+      op = Math.min(1, p * 4.5);
+    } else {
+      const q = (t - 0.68) / 0.32;
+      dx = -10 * (1 - q) * Math.cos(q * Math.PI * 1.5);
+      dy = -12 * Math.sin(q * Math.PI) * (1 - q * 0.4);
+      rot = 14 * Math.sin(q * Math.PI * 2) * (1 - q);
+      sx = 1 + 0.14 * Math.sin(q * Math.PI) * (1 - q);
+      sy = 1 - 0.12 * Math.sin(q * Math.PI) * (1 - q);
+      op = 1;
+    }
+    pill.style.opacity = op.toFixed(3);
+    pill.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+    if (t >= 1) clearPillToss();
+  }
+
+  function launchPillToss(now) {
+    if (pillToss) return;
+    pillToss = { startedAt: now };
+    pill.hidden = false;
+    pill.classList.add('tossing');
+    layout(true);
+    updatePillToss(now);
+  }
+
+  function startLeaveToPill() {
+    if (leaveAnim) return;
+    peekInAnim = null;
+    hovered = false;
+    dragging = false;
+    pointerDown = false;
+    lastEntryMode = 'pill';
+    if (!canAnimateTransitions()) {
+      cancelTransitions();
+      root.hidden = true;
+      pill.hidden = false;
+      layout(false);
+      return;
+    }
+    clearPillToss();
+    leaveAnim = { startedAt: null, pillLaunched: false };
+    root.hidden = false;
+    root.classList.add('leaving');
+    pill.hidden = true;
+  }
+
+  function startPeekIn() {
+    cancelTransitions();
+    lastEntryMode = 'pet';
+    root.hidden = false;
+    pill.hidden = true;
+    excitedT = 1;
+    triggerWink(420);
+    if (canAnimateTransitions()) {
+      peekInAnim = { startedAt: null };
+    }
+    layout(false);
+  }
+
   function showMenu(clientX, clientY) {
     menu.replaceChildren();
     const curEntry = resolveEntryMode(settings);
@@ -256,7 +368,14 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     const items = [
       ...(drawerHost ? [{ label: L(drawerOpen ? 'petMenuClose' : 'petMenuOpen'), run: () => setDrawerOpen(!drawerOpen) }] : []),
       { label: L(settings?.paused ? 'petMenuResume' : 'petMenuPause'), run: () => dispatchPatch({ paused: !settings?.paused }) },
-      { label: L('petMenuEntry', { mode: entryLabel(nextEntry) }), run: () => dispatchPatch({ entryMode: nextEntry, petEnabled: nextEntry === 'pet' }) },
+      {
+        label: L(nextEntry === 'pill' ? 'petMenuToPill' : 'petMenuToPet'),
+        run: () => {
+          dispatchPatch({ entryMode: nextEntry, petEnabled: nextEntry === 'pet' });
+          if (nextEntry === 'pill') startLeaveToPill();
+          else startPeekIn();
+        },
+      },
     ];
     for (const item of items) {
       const btn = document.createElement('button');
@@ -269,7 +388,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     menu.hidden = false;
     const vw = globalThis.innerWidth || 1280;
     const vh = globalThis.innerHeight || 800;
-    const mw = 176, mh = items.length * 32 + 12;
+    const mw = 188, mh = items.length * 32 + 12;
     menu.style.left = `${Math.max(8, Math.min(vw - mw - 8, clientX - mw - 8))}px`;
     menu.style.top = `${Math.max(8, Math.min(vh - mh - 8, clientY - 12))}px`;
   }
@@ -308,7 +427,7 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     ctx.restore();
   }
 
-  function drawFluffyTail(ctx, rx, ry, bodyW, phase) {
+  function drawFluffyTail(ctx, rx, ry, bodyW, phase, sadness = 0) {
     if (!tailReady || !imgTail) return;
     const N = 26;
     const totalLen = bodyW * 1.13;
@@ -317,19 +436,21 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     const th = imgTail.naturalHeight || 128;
     const halfH = totalLen * (th / tw) * 0.43;
 
+    const wagAmp = 1 - sadness * 0.58;
     const topPts = [];
     const botPts = [];
     let x = rx, y = ry;
     for (let i = 0; i <= N; i++) {
       const s = i / N;
+      const droop = sadness * (0.28 + 0.16 * s);
       // Alluring high-curvature feline tail wave emerging behind her hips/skirt hem:
       // Sweeping UP -> deep overarching downward hook (╮)
       // Reaching top & sweeping DOWN -> lush coquettish J-hook upward curl (╰╯)
       // Bottom turnaround -> wide languid S-curve so it stays plush & curved all the way to the bottom
-      const a = 0.54 - 0.30 * Math.pow(s, 1.7) -
-        0.28 * Math.sin(phase) * (1 - 0.65 * s) -
-        1.44 * Math.pow(s, 0.95) * Math.sin(phase - 2.18 * s) -
-        0.66 * Math.pow(s, 1.85) * Math.sin(phase - 3.05 * s);
+      const a = 0.54 + droop - 0.30 * Math.pow(s, 1.7) * (1 - sadness * 0.45) -
+        0.28 * wagAmp * Math.sin(phase) * (1 - 0.65 * s) -
+        1.44 * wagAmp * Math.pow(s, 0.95) * Math.sin(phase - 2.18 * s) -
+        0.66 * wagAmp * Math.pow(s, 1.85) * Math.sin(phase - 3.05 * s);
       if (i > 0) {
         x += -Math.cos(a) * ds;
         y += Math.sin(a) * ds;
@@ -355,15 +476,24 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     if (typeof globalThis.requestAnimationFrame === 'function') {
       rafId = globalThis.requestAnimationFrame(renderFrame);
     }
-    if (document.hidden || !settings?.petEnabled) return;
-    const ctx = canvas.getContext?.('2d');
-    if (!ctx) return;
+    if (document.hidden) return;
+    const petVisible = Boolean(settings?.enabled) && (resolveEntryMode(settings) === 'pet' || Boolean(leaveAnim));
+    if (!petVisible && !pillToss) return;
 
-    const minFrameMs = (hovered || dragging || excitedT > 0.02) ? 14 : 30;
+    const anyAnim = Boolean(leaveAnim || pillToss || peekInAnim);
+    const minFrameMs = (hovered || dragging || excitedT > 0.02 || anyAnim) ? 12 : 30;
     if (lastFrameAt && now - lastFrameAt < minFrameMs) return;
 
     const dt = lastFrameAt ? Math.min(0.05, Math.max(0.004, (now - lastFrameAt) / 1000)) : 0.016;
     lastFrameAt = now;
+
+    // Advance pill toss physics even after the catgirl has vanished behind the border
+    if (pillToss) updatePillToss(now);
+    if (!petVisible) return;
+
+    const ctx = canvas.getContext?.('2d');
+    if (!ctx) return;
+
     if (now - lastLayoutAt > 180) {
       lastLayoutAt = now;
       const r = findChatPaneRect();
@@ -377,17 +507,18 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     }
     if (obscured) return;
 
-    const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const reduced = isReducedMotion();
     hoverT += ((hovered ? 1 : 0) - hoverT) * Math.min(1, dt * 11);
     excitedT = Math.max(0, excitedT - dt * 2.4);
-    if (!reduced) tailPhase += dt * (2.05 + hoverT * 0.85 + excitedT * 1.8);
+    const tailSpeed = leaveAnim ? 0.85 : (2.05 + hoverT * 0.85 + excitedT * 1.8);
+    if (!reduced) tailPhase += dt * tailSpeed;
 
     const wallNow = Date.now();
-    if (!reduced && wallNow >= nextWinkAt) {
+    if (!reduced && !leaveAnim && wallNow >= nextWinkAt) {
       triggerWink(360);
       nextWinkAt = wallNow + 6500 + Math.random() * 4000;
     }
-    const isWinking = wallNow < winkUntil;
+    const isWinking = !leaveAnim && wallNow < winkUntil;
 
     const d = dims();
     const dpr = Math.min(1.5, globalThis.devicePixelRatio || 1);
@@ -401,24 +532,113 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, d.canvasW, d.canvasH);
 
-    const bobY = reduced ? 0 : Math.sin(now * 0.0022) * 1.6 - Math.sin(excitedT * Math.PI) * 3.2;
-    const peekX = -hoverT * 4.2;
-    const tilt = -(hoverT * 0.036 + Math.sin(excitedT * Math.PI) * 0.025);
+    let sadness = 0;
+    let forceSadSprite = false;
+    let retreatX = 0;
+    let extraY = 0;
+    let extraTilt = 0;
+    let bodyScaleX = 1;
+    let bodyScaleY = 1;
+    let bodySkewY = 0;
+    let clipRightX = null;
+
+    if (leaveAnim) {
+      if (leaveAnim.startedAt === null) leaveAnim.startedAt = now;
+      const elapsed = Math.max(0, now - leaveAnim.startedAt);
+      forceSadSprite = true;
+      if (!leaveAnim.pillLaunched && elapsed >= PILL_LAUNCH_AT_MS) {
+        leaveAnim.pillLaunched = true;
+        launchPillToss(now);
+      }
+      if (elapsed < LEAVE_SAD_MS) {
+        // Stage 1: cute pouting/sad expression + gentle melancholic droop
+        const p = elapsed / LEAVE_SAD_MS;
+        const wilt = Math.min(1, p / 0.28);
+        const easeWilt = 1 - Math.pow(1 - wilt, 3);
+        sadness = easeWilt;
+        extraY = easeWilt * 3.8 + (p > 0.28 ? Math.sin((p - 0.28) * Math.PI * 3) * 0.7 : 0);
+        extraTilt = -easeWilt * 0.052;
+        bodyScaleX = 1 + easeWilt * 0.018;
+        bodyScaleY = 1 - easeWilt * 0.032;
+      } else {
+        // Stage 2: turn head toward right border & slip behind the border seam
+        const u = Math.min(1, (elapsed - LEAVE_SAD_MS) / LEAVE_RETREAT_MS);
+        sadness = 1;
+        const pawRelease = Math.min(1, u / 0.22);
+        clipRightX = d.canvasW - (d.canvasW - (d.seamInCanvas + 1)) * pawRelease;
+        const turn = Math.min(1, u / 0.36);
+        const turnEase = turn * turn * (3 - 2 * turn);
+        bodyScaleX = 1.018 - turnEase * 0.40;
+        bodyScaleY = 0.968 + turnEase * 0.04;
+        bodySkewY = -turnEase * 0.085;
+        extraTilt = -0.052 + turnEase * 0.22;
+        extraY = 3.8 * (1 - u * 0.45);
+        const slideEase = u < 0.18
+          ? (u / 0.18) * 0.05
+          : 0.05 + 0.95 * Math.pow((u - 0.18) / 0.82, 2.2);
+        retreatX = slideEase * (d.bodyW * 1.24 + 16);
+      }
+      if (elapsed >= LEAVE_TOTAL_MS) {
+        if (!leaveAnim.pillLaunched) {
+          leaveAnim.pillLaunched = true;
+          launchPillToss(now);
+        }
+        leaveAnim = null;
+        root.classList.remove('leaving');
+        root.hidden = true;
+        return;
+      }
+    } else if (peekInAnim) {
+      if (peekInAnim.startedAt === null) peekInAnim.startedAt = now;
+      const u = Math.min(1, Math.max(0, (now - peekInAnim.startedAt) / PEEK_IN_MS));
+      const c1 = 1.45;
+      const c3 = c1 + 1;
+      const back = 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2);
+      retreatX = Math.max(-4, (1 - back) * (d.bodyW * 1.12));
+      bodyScaleX = 0.72 + Math.min(1, u / 0.65) * 0.28;
+      extraTilt = (1 - u) * 0.14;
+      if (u < 0.78) {
+        clipRightX = d.seamInCanvas + 1;
+      } else {
+        const pawPop = (u - 0.78) / 0.22;
+        clipRightX = d.seamInCanvas + 1 + (d.canvasW - (d.seamInCanvas + 1)) * pawPop;
+      }
+      if (u >= 1) peekInAnim = null;
+    }
+
+    const bobY = (reduced || leaveAnim) ? 0 : Math.sin(now * 0.0022) * 1.6 - Math.sin(excitedT * Math.PI) * 3.2;
+    const peekX = leaveAnim ? 0 : -hoverT * 4.2;
+    const tilt = leaveAnim ? 0 : -(hoverT * 0.036 + Math.sin(excitedT * Math.PI) * 0.025);
     const pivotX = d.seamInCanvas;
     const pivotY = d.padT + d.bodyH * 0.52;
 
-    // 1. Draw silky animated tail behind body (rooted cleanly under rear skirt/hips, above her leg)
-    const tailRootX = d.padL + d.bodyW * 0.84 + peekX * 0.45;
-    const tailRootY = d.padT + d.bodyH * 0.88 + bobY * 0.55;
-    drawFluffyTail(ctx, tailRootX, tailRootY, d.bodyW, tailPhase);
+    if (clipRightX !== null) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, clipRightX, d.canvasH);
+      ctx.clip();
+    }
 
-    // 2. Draw aligned catgirl body (open or wink) anchored at gripping paws
-    const sprite = (isWinking && winkReady) ? imgWink : (openReady ? imgOpen : null);
+    // 1. Draw silky animated tail behind body (rooted cleanly under rear skirt/hips, above her leg)
+    const tailRootX = d.padL + d.bodyW * 0.84 + peekX * 0.45 + retreatX * 0.92;
+    const tailRootY = d.padT + d.bodyH * 0.88 + bobY * 0.55 + extraY * 0.7;
+    drawFluffyTail(ctx, tailRootX, tailRootY, d.bodyW, tailPhase, sadness);
+
+    // 2. Draw aligned catgirl body (sad / wink / open) anchored at gripping paws
+    const sprite = forceSadSprite
+      ? (sadReady ? imgSad : (openReady ? imgOpen : null))
+      : ((isWinking && winkReady) ? imgWink : (openReady ? imgOpen : null));
     if (sprite) {
       ctx.save();
-      ctx.translate(pivotX + peekX, pivotY + bobY);
-      ctx.rotate(tilt);
+      ctx.translate(pivotX + peekX + retreatX, pivotY + bobY + extraY);
+      ctx.rotate(tilt + extraTilt);
+      if (bodySkewY) ctx.transform(1, bodySkewY, 0, 1, 0, 0);
+      if (bodyScaleX !== 1 || bodyScaleY !== 1) ctx.scale(bodyScaleX, bodyScaleY);
       ctx.drawImage(sprite, d.padL - pivotX, d.padT - pivotY, d.bodyW, d.bodyH);
+      ctx.restore();
+    }
+
+    if (clipRightX !== null) {
       ctx.restore();
     }
   }
@@ -605,6 +825,8 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
   }
 
   function update(nextSettings) {
+    const prevMode = lastEntryMode;
+    const wasActive = Boolean(settings?.enabled);
     settings = nextSettings;
     hit.setAttribute('aria-label', L('petAria'));
     hit.title = L('petTitle');
@@ -614,16 +836,36 @@ export function createCatPet({ onPatch, getSettings, assets, drawerUrl, isPrevie
     if (drawerFrame) drawerFrame.title = L('petFrameTitle');
     const mode = resolveEntryMode(settings);
     const active = Boolean(settings?.enabled);
-    root.hidden = !(active && mode === 'pet');
-    pill.hidden = !(active && mode === 'pill');
+    lastEntryMode = mode;
     if (!active) {
+      cancelTransitions();
+      root.hidden = true;
+      pill.hidden = true;
       hideMenu();
       if (drawerOpen) setDrawerOpen(false);
-    } else {
-      if (mode === 'hotkey') hideMenu();
-      bindPaneObserver();
-      layout(false);
+      return;
     }
+    if (mode === 'pill') {
+      if (wasActive && prevMode === 'pet' && !leaveAnim && !pillToss) {
+        startLeaveToPill();
+      } else if (leaveAnim) {
+        root.hidden = false;
+        pill.hidden = !leaveAnim.pillLaunched;
+      } else {
+        root.hidden = true;
+        pill.hidden = false;
+      }
+    } else {
+      if (wasActive && prevMode === 'pill') {
+        startPeekIn();
+      } else {
+        cancelTransitions();
+        root.hidden = false;
+        pill.hidden = true;
+      }
+    }
+    bindPaneObserver();
+    layout(false);
   }
 
   function dispose() {

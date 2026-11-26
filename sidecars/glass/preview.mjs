@@ -7,7 +7,7 @@ window.addEventListener('message', event => {
     ...payload,
     zhDictUrl: './assets/zh-dict.json',
     mediaThumbUrl: payload.media?.thumbUrl || null,
-    petAssets: { open: './assets/pet-open.webp', wink: './assets/pet-wink.webp', tail: './assets/pet-tail.webp' },
+    petAssets: { open: './assets/pet-open.webp', wink: './assets/pet-wink.webp', sad: './assets/pet-sad.webp', tail: './assets/pet-tail.webp' },
     settings: { ...payload.settings, enabled: true },
     owner: 'agy-glass-preview',
     leaseMs: 15000,
