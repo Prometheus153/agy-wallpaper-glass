@@ -325,10 +325,9 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
         if (path === '/panel.js' || path === '/preview.js') {
           const i18nSrc = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8');
           const monetSrc = readFileSync(join(ROOT, 'monet.mjs'), 'utf8');
-          const effortSrc = readFileSync(join(ROOT, 'effort-slider.mjs'), 'utf8');
           const shared = path === '/panel.js'
-            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8') + '\n' + i18nSrc + '\n' + monetSrc + '\n' + effortSrc
-            : i18nSrc + '\n' + monetSrc + '\n' + readFileSync(join(ROOT, 'zh-ui.mjs'), 'utf8') + '\n' + effortSrc + '\n' + readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
+            ? readFileSync(join(ROOT, 'config.mjs'), 'utf8') + '\n' + i18nSrc + '\n' + monetSrc
+            : i18nSrc + '\n' + monetSrc + '\n' + readFileSync(join(ROOT, 'zh-ui.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'pet.mjs'), 'utf8') + '\n' + readFileSync(join(ROOT, 'runtime.mjs'), 'utf8');
           body = `(async () => {\n${shared.replace(/^export /gm, '')}\n${body.replace(/^import .*;\r?\n/gm, '')}\n})().catch(error => console.error('AGY Wallpaper Glass initialization failed:', error));`;
         }
         if (file === 'index.html') {
@@ -485,9 +484,9 @@ export async function startServer({ preview = false, port = 0, dataDir, token, s
   const i18nSource = readFileSync(join(ROOT, 'i18n.mjs'), 'utf8').replace(/^export /gm, '');
   const monetSource = readFileSync(join(ROOT, 'monet.mjs'), 'utf8').replace(/^export /gm, '');
   const zhUiSource = readFileSync(join(ROOT, 'zh-ui.mjs'), 'utf8').replace(/^export /gm, '');
-  const effortSource = readFileSync(join(ROOT, 'effort-slider.mjs'), 'utf8').replace(/^export /gm, '');
+  const effortVendorSource = readFileSync(join(ROOT, 'vendor', 'effort-slider-client.js'), 'utf8');
   const petSource = readFileSync(join(ROOT, 'pet.mjs'), 'utf8').replace(/^export /gm, '');
-  const runtimeBundle = `(payload) => {\n${i18nSource}\n${monetSource}\n${zhUiSource}\n${effortSource}\n${petSource}\nreturn (${installGlass.toString()})(payload);\n}`;
+  const runtimeBundle = `(payload) => {\n${i18nSource}\n${monetSource}\n${zhUiSource}\n${petSource}\nif (!globalThis.AntigravityCodexEffortSlider) {\n  globalThis.__agCodexEffortSliderDisableAutoBoot = true;\n${effortVendorSource}\n}\nreturn (${installGlass.toString()})(payload);\n}`;
   if (!preview) bridge = startBridge({ getPayload, runtimeSource: runtimeBundle });
   try {
     await new Promise((resolveListen, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolveListen); });

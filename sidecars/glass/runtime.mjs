@@ -420,9 +420,12 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
       localizer.setEnabled(Boolean(settings.hostZhUi), next.zhDictUrl || '');
     }
 
-    if (typeof createEffortSlider === 'function') {
-      if (!effortSlider) effortSlider = createEffortSlider({ getSettings: () => settings });
-      else effortSlider.update(settings);
+    if (!effortSlider && payload.owner !== 'agy-glass-preview' && typeof globalThis.AntigravityCodexEffortSlider?.installCodexEffortSlider === 'function') {
+      if (!globalThis.__agCodexEffortSliderInstance) {
+        try {
+          effortSlider = globalThis.AntigravityCodexEffortSlider.installCodexEffortSlider({ document, window: globalThis });
+        } catch {}
+      }
     }
 
     if (!pet && typeof createCatPet === 'function' && (next.petAssets || next.drawerUrl)) {
@@ -448,7 +451,7 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
     clearInterval(watchdog);
     localizer?.dispose();
     localizer = null;
-    effortSlider?.dispose();
+    try { effortSlider?.stop?.(); } catch {}
     effortSlider = null;
     pet?.dispose();
     pet = null;

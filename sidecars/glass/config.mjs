@@ -7,7 +7,6 @@ export const ALLOWED_LANGUAGES = Object.freeze(['auto', 'zh-CN', 'en']);
 export const ALLOWED_PERF_MODES = Object.freeze(['eco', 'balanced', 'ultra']);
 export const ALLOWED_FPS_LIMITS = Object.freeze([30, 45, 60]);
 export const ALLOWED_ENTRY_MODES = Object.freeze(['pet', 'pill']);
-export const ALLOWED_EFFORT_STYLES = Object.freeze(['auto', 'codex', 'claude']);
 
 export const DEFAULTS = Object.freeze({
   enabled: false,
@@ -51,10 +50,6 @@ export const DEFAULTS = Object.freeze({
   petEnabled: true,
   petSize: 92,
   petY: 46,
-  // Creative: model reasoning effort slider
-  effortSliderEnabled: true,
-  effortSliderStyle: 'auto',
-  effortSliderEffects: true,
 });
 
 const intRanges = {
@@ -78,8 +73,8 @@ const intRanges = {
   petY: [10, 86],
 };
 
-const boolKeys = new Set(['enabled', 'paused', 'flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled', 'hostZhUi', 'dynamicAccent', 'effortSliderEnabled', 'effortSliderEffects']);
-const LEGACY_IGNORED_KEYS = new Set(['activePlaylistId', 'autoRotate', 'rotateMinutes']);
+const boolKeys = new Set(['enabled', 'paused', 'flipX', 'pauseWhenHidden', 'pointerParallax', 'petEnabled', 'hostZhUi', 'dynamicAccent']);
+const LEGACY_IGNORED_KEYS = new Set(['activePlaylistId', 'autoRotate', 'rotateMinutes', 'effortSliderEnabled', 'effortSliderStyle', 'effortSliderEffects']);
 
 export function migrateSavedSettings(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return input;
@@ -113,8 +108,6 @@ export function validateSettings(input, previous = DEFAULTS) {
       if (!Number.isInteger(value) || !ALLOWED_FPS_LIMITS.includes(value)) throw new Error('帧率上限无效');
     } else if (key === 'entryMode') {
       if (!ALLOWED_ENTRY_MODES.includes(value)) throw new Error('快捷入口形态无效');
-    } else if (key === 'effortSliderStyle') {
-      if (!ALLOWED_EFFORT_STYLES.includes(value)) throw new Error('思考强度滑条风格无效');
     } else if (key === 'playbackRate') {
       if (typeof value !== 'number' || !ALLOWED_RATES.includes(value)) throw new Error('播放倍速无效');
     } else if (key === 'fit') {
