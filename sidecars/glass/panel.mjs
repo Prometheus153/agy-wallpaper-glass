@@ -1,6 +1,7 @@
 import { DEFAULTS, MAX_MEDIA_BYTES, MAX_PKG_BYTES, validateSettings } from './config.mjs';
 import { localizeBuiltinTitle, localizePropLabel, localizeSource, resolveLanguage, tr } from './i18n.mjs';
 import { sampleMonetFromImageUrl } from './monet.mjs';
+import { createEffortSliderWidget } from './effort-slider.mjs';
 
 const $ = id => document.getElementById(id);
 const mode = document.documentElement.dataset.mode;
@@ -60,6 +61,7 @@ function applyLanguage() {
   }
   setStatus(lastStatus);
   if (libraryItems !== null) setLibraryStatus(librarySummary());
+  if (typeof syncEffortDemo === 'function' && demoWidget) syncEffortDemo();
 }
 let media = null;
 let sceneProperties = {};
@@ -301,6 +303,11 @@ function renderControls() {
   $('pointerParallax').checked = settings.pointerParallax;
   if ($('hostZhUi')) $('hostZhUi').checked = Boolean(settings.hostZhUi);
   if ($('dynamicAccent')) $('dynamicAccent').checked = Boolean(settings.dynamicAccent);
+  if ($('effortSliderEnabled')) $('effortSliderEnabled').checked = settings.effortSliderEnabled !== false;
+  if ($('effortSliderEffects')) $('effortSliderEffects').checked = settings.effortSliderEffects !== false;
+  const effStyle = settings.effortSliderStyle || 'auto';
+  document.querySelectorAll('[data-effort-style]').forEach(btn => btn.classList.toggle('active', btn.dataset.effortStyle === effStyle));
+  syncEffortDemo();
   const entry = settings.entryMode === 'pill' || settings.petEnabled === false ? 'pill' : 'pet';
   document.querySelectorAll('[data-entry]').forEach(btn => btn.classList.toggle('active', btn.dataset.entry === entry));
   if ($('pet-size-row')) $('pet-size-row').hidden = entry !== 'pet';
@@ -552,10 +559,65 @@ document.querySelectorAll('[data-entry]').forEach(btn => btn.addEventListener('c
   const entryMode = btn.dataset.entry;
   patchSettings({ entryMode, petEnabled: entryMode === 'pet' }, true);
 }));
-for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'hostZhUi', 'dynamicAccent']) {
+for (const boolKey of ['flipX', 'pauseWhenHidden', 'pointerParallax', 'hostZhUi', 'dynamicAccent', 'effortSliderEnabled', 'effortSliderEffects']) {
   const el = $(boolKey);
   if (el) el.addEventListener('change', () => patchSettings({ [boolKey]: el.checked }, true));
 }
+document.querySelectorAll('[data-effort-style]').forEach(btn => btn.addEventListener('click', () => {
+  patchSettings({ effortSliderStyle: btn.dataset.effortStyle }, true);
+}));
+
+// Interactive live demo widget in Creative tab
+let demoModel = 'gemini';
+let demoIdx = { gemini: 2, claude: 1 };
+let demoWidget = null;
+const DEMO_LEVELS = {
+  gemini: [
+    { key: 'low', label: 'Low' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'high', label: 'High' },
+    { key: 'xhigh', label: 'Extra High' },
+  ],
+  claude: [
+    { key: 'low', label: 'Low' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'high', label: 'High' },
+  ],
+};
+function syncEffortDemo() {
+  const mount = $('effort-demo-mount');
+  if (!mount || typeof createEffortSliderWidget !== 'function') return;
+  if (!demoWidget) {
+    demoWidget = createEffortSliderWidget({
+      doc: document,
+      title: L('effortSliderTitle'),
+      lang: currentLang(),
+      styleMode: settings.effortSliderStyle || 'auto',
+      effects: settings.effortSliderEffects !== false,
+      isDark: () => true,
+      onCommit(_level, idx) { demoIdx[demoModel] = idx; },
+    });
+    mount.replaceChildren(demoWidget.el);
+  }
+  const levels = DEMO_LEVELS[demoModel] || DEMO_LEVELS.gemini;
+  demoWidget.setProfile({
+    baseName: demoModel === 'claude' ? 'Claude 4.7 Opus' : 'Gemini 4 Neon',
+    isClaude: demoModel === 'claude',
+    levels,
+    activeIndex: Math.min(levels.length - 1, demoIdx[demoModel] ?? 1),
+    locked: false,
+  }, {
+    title: L('effortSliderTitle'),
+    lang: currentLang(),
+    styleMode: settings.effortSliderStyle || 'auto',
+    effects: settings.effortSliderEffects !== false,
+  });
+}
+document.querySelectorAll('[data-demo-model]').forEach(btn => btn.addEventListener('click', () => {
+  demoModel = btn.dataset.demoModel === 'claude' ? 'claude' : 'gemini';
+  document.querySelectorAll('[data-demo-model]').forEach(b => b.classList.toggle('active', b === btn));
+  syncEffortDemo();
+}));
 $('toggle-enabled').addEventListener('change', () => patchSettings({ enabled: $('toggle-enabled').checked }, true));
 $('disable').addEventListener('click', () => patchSettings({ enabled: false }, true));
 $('defaults').addEventListener('click', () => patchSettings({ ...DEFAULTS, enabled: settings.enabled, language: settings.language }, true));

@@ -268,8 +268,39 @@
           </details>
         </section>
 
-        <!-- TAB 3: Creative (Blank Canvas) -->
-        <section class="tab-panel" id="tab-creative" role="tabpanel" hidden></section>
+        <!-- TAB 3: Creative -->
+        <section class="tab-panel" id="tab-creative" role="tabpanel" hidden>
+          <div class="glass-card">
+            <div class="card-head"><h2 data-i18n="secEffortSlider">模型思考强度滑条</h2></div>
+            <div class="switch-row">
+              <span class="s-label" data-i18n="lblEffortEnabled">在模型菜单中显示强度滑条</span>
+              <label class="ios-switch"><input type="checkbox" id="effortSliderEnabled" name="effortSliderEnabled" checked><span class="ios-track"></span></label>
+            </div>
+            <p class="hint-note" data-i18n="effortHint">灵感致敬 Codex &amp; Claude 风格 · 无损注入不改原程序 · 拖拽切换档位不关闭菜单</p>
+            <div class="seg-row">
+              <span class="s-label" data-i18n="lblEffortStyle">视觉风格</span>
+              <div class="seg-pills perf-pills" id="effort-style-group" role="group" aria-label="Effort Slider Style">
+                <button type="button" class="pill-opt active" data-effort-style="auto" data-i18n="effortStyleAuto">自动</button>
+                <button type="button" class="pill-opt" data-effort-style="codex" data-i18n="effortStyleCodex">Codex 星尘</button>
+                <button type="button" class="pill-opt" data-effort-style="claude" data-i18n="effortStyleClaude">Claude 点阵</button>
+              </div>
+            </div>
+            <div class="switch-row">
+              <span class="s-label" data-i18n="lblEffortEffects">星尘粒子与满档光效</span>
+              <label class="ios-switch"><input type="checkbox" id="effortSliderEffects" name="effortSliderEffects" checked><span class="ios-track"></span></label>
+            </div>
+            <div class="effort-demo-box" id="effort-demo-box">
+              <div class="effort-demo-head">
+                <span data-i18n="effortDemoLabel">实时体验预览（可拖动切换档位）</span>
+                <div class="effort-demo-models" id="effort-demo-models">
+                  <button type="button" class="effort-demo-chip active" data-demo-model="gemini">Gemini</button>
+                  <button type="button" class="effort-demo-chip" data-demo-model="claude">Claude</button>
+                </div>
+              </div>
+              <div id="effort-demo-mount"></div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <footer class="drawer-footer">

@@ -47,6 +47,7 @@ export function installGlass(payload) {
   let lastPointerSent = 0;
   let pet = null;
   let localizer = null;
+  let effortSlider = null;
   let monetKey = '';
   let monetPalette = null;
   let monetSeq = 0;
@@ -419,6 +420,11 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
       localizer.setEnabled(Boolean(settings.hostZhUi), next.zhDictUrl || '');
     }
 
+    if (typeof createEffortSlider === 'function') {
+      if (!effortSlider) effortSlider = createEffortSlider({ getSettings: () => settings });
+      else effortSlider.update(settings);
+    }
+
     if (!pet && typeof createCatPet === 'function' && (next.petAssets || next.drawerUrl)) {
       pet = createCatPet({
         getSettings: () => settings,
@@ -442,6 +448,8 @@ ${scope} .agy-pet-menu-item:hover { background: ${isLight ? 'rgba(15,23,42,0.08)
     clearInterval(watchdog);
     localizer?.dispose();
     localizer = null;
+    effortSlider?.dispose();
+    effortSlider = null;
     pet?.dispose();
     pet = null;
     document.removeEventListener('visibilitychange', syncPlayback);

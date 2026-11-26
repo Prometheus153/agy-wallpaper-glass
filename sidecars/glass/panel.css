@@ -355,6 +355,18 @@ textarea.glass-input { height: auto; padding: 7px 9px; resize: vertical; min-hei
 .monet-hex { font-family: ui-monospace, Consolas, monospace; font-size: 10px; color: var(--accent); }
 .hint-note { font-size: 10.5px; color: var(--muted); line-height: 1.45; margin-top: -2px; }
 #pet-size-row[hidden] { display: none !important; }
+.effort-demo-box {
+  margin-top: 2px; border-radius: 11px; padding: 8px 9px 4px;
+  background: rgba(10, 14, 24, 0.48); border: 1px solid rgba(255, 255, 255, 0.11);
+}
+.effort-demo-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 10.5px; color: var(--muted); margin-bottom: 2px; }
+.effort-demo-models { display: inline-flex; gap: 4px; flex-shrink: 0; }
+.effort-demo-chip {
+  font-size: 10px; padding: 2px 7px; border-radius: 6px; color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); cursor: pointer;
+}
+.effort-demo-chip.active { background: rgba(125, 211, 252, 0.2); border-color: rgba(125, 211, 252, 0.5); color: #e8f9ff; font-weight: 600; }
+#effort-demo-mount .agy-eff-section { border-top: 0; margin-top: 0; padding: 4px 2px 6px; }
 
 .drawer-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
