@@ -107,7 +107,10 @@ const SKIP_SELECTOR = [
   '[data-testid="model-selector-panel"]',
   '[data-testid="model-selector-trigger"]',
   '[data-testid="orchestrator-picker-row"]',
-  '.ces-ag-section', '.ces-inline', '.ces-root', '.ces-set', '[data-ces-part]',
+  '[role="menu"]:has([data-testid="model-selector-panel"])',
+  '[role="menu"]:has([data-testid="orchestrator-picker-row"])',
+  '.ces-ag-section', '.ces-ag-effort-row', '.ces-ag-effort-value',
+  '.ces-inline', '.ces-root', '.ces-set', '[data-ces-part]', '[data-ces-effort-row]',
   'pre', 'code', '.monaco-editor', '.monaco-diff-editor', '.cm-editor', '.xterm',
   '[contenteditable="true"]',
   '#agy-glass-pet-root', '#agy-glass-pill-root', '#agy-glass-drawer-host',
@@ -194,7 +197,8 @@ function isInsideSkipped(node) {
       el.getAttribute?.('data-testid') === 'model-selector-trigger' ||
       el.getAttribute?.('data-testid') === 'orchestrator-picker-row' ||
       el.getAttribute?.('data-ces-part') !== null ||
-      /\bces-(?:ag-section|inline|root|set)\b/.test(String(el.className || '')) ||
+      el.getAttribute?.('data-ces-effort-row') !== null ||
+      /\bces-(?:ag-section|ag-effort-row|ag-effort-value|inline|root|set)\b/.test(String(el.className || '')) ||
       el.getAttribute?.('contenteditable') === 'true'
     ) {
       return true;
